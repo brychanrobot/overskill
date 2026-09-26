@@ -16,7 +16,7 @@ Official Resources:
    - Convex verifies JWTs using `convex/auth.config.ts`.
    - Set the domain on your Convex deployment:
      ```bash
-     npx convex env set CLERK_FRONTEND_API_URL https://<your-fapi-url>.clerk.accounts.dev
+     pnpm convex env set CLERK_FRONTEND_API_URL https://<your-fapi-url>.clerk.accounts.dev
      ```
    - In mutations/queries, identify the user with:
      ```ts

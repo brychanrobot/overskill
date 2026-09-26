@@ -82,17 +82,17 @@ gh auth status
 pnpm --version
 
 # 3. Verify Vercel CLI is authenticated
-npx vercel whoami
+pnpm dlx vercel whoami
 
 # 4. Verify Convex CLI is authenticated
-npx convex whoami
+pnpm dlx convex whoami
 ```
 
 > [!IMPORTANT]
 > If any tool reports unauthenticated status, assist the user calmly:
 > - For GitHub: Run `gh auth login`
-> - For Vercel: Run `npx vercel login`
-> - For Convex: Run `npx convex login`
+> - For Vercel: Run `pnpm dlx vercel login`
+> - For Convex: Run `pnpm dlx convex login`
 
 #### 2. The Idea Interview (For Non-SWEs & Creators)
 Ask the user in plain English what they would like to build:
@@ -707,7 +707,7 @@ Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) usi
 #### 1. Provision Convex Dev Backend Headlessly
 Run headless Convex provisioning:
 ```bash
-npx convex dev --once
+pnpm convex dev --once
 ```
 This generates the deployment URL and updates `.env.local` with `CONVEX_DEPLOYMENT` and `PUBLIC_CONVEX_URL`.
 
@@ -723,7 +723,7 @@ Guide the user with clear, friendly steps to obtain their keys:
 
 Once the user provides the Frontend API URL, configure it on Convex:
 ```bash
-npx convex env set CLERK_FRONTEND_API_URL <user-fapi-url>
+pnpm convex env set CLERK_FRONTEND_API_URL <user-fapi-url>
 ```
 
 #### 3. Verify Code Quality & Unit Tests
@@ -813,27 +813,31 @@ gh repo view
    pnpm run test:e2e
    ```
 
-2. **Deploy Headlessly to Vercel**:
+2. **Install Vercel CLI & Deploy Headlessly**:
    ```bash
-   npx vercel --prod --yes
+   # Ensure Vercel CLI is installed in devDependencies
+   pnpm add -D vercel
+
+   # Initial deployment
+   pnpm vercel --prod --yes
    ```
 
 3. **Synchronize Production Environment Variables on Vercel**:
    Set the exact required production environment variables using the Vercel CLI:
    ```bash
    # Add Public Convex URL
-   npx vercel env add PUBLIC_CONVEX_URL production
+   pnpm vercel env add PUBLIC_CONVEX_URL production
 
    # Add Public Clerk Publishable Key
-   npx vercel env add PUBLIC_CLERK_PUBLISHABLE_KEY production
+   pnpm vercel env add PUBLIC_CLERK_PUBLISHABLE_KEY production
 
    # Add Clerk Secret Key
-   npx vercel env add CLERK_SECRET_KEY production
+   pnpm vercel env add CLERK_SECRET_KEY production
    ```
 
 4. **Trigger Final Production Build**:
    ```bash
-   npx vercel --prod --yes
+   pnpm vercel --prod --yes
    ```
 
 ---
