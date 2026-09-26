@@ -27,16 +27,18 @@
 </script>
 
 <ClerkProvider>
-  <div class="app-shell">
-    <header class="navbar">
-      <div class="nav-content">
-        <a href="/" class="brand-link">
-          <span class="brand-icon">⚡</span>
-          <span class="brand-title">My App</span>
+  <div class="min-h-screen flex flex-col bg-background text-foreground">
+    <header class="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-90 transition-opacity">
+          <span class="text-xl">⚡</span>
+          <span>My App</span>
         </a>
-        <nav class="auth-controls">
+        <nav class="flex items-center gap-3">
           <SignedOut>
-            <SignInButton mode="modal" class="btn btn-primary">Sign In</SignInButton>
+            <SignInButton mode="modal" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 transition-colors cursor-pointer">
+              Sign In
+            </SignInButton>
           </SignedOut>
           <SignedIn>
             <UserButton afterSignOutUrl="/" />
@@ -45,66 +47,12 @@
       </div>
     </header>
 
-    <main class="container">
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
       {@render children?.()}
     </main>
 
-    <footer class="app-footer">
-      <p>Built with SvelteKit & Convex</p>
+    <footer class="border-t border-border/40 py-6 text-center text-sm text-muted-foreground">
+      <p>Built with SvelteKit, Convex, Clerk & Tailwind CSS</p>
     </footer>
   </div>
 </ClerkProvider>
-
-<style>
-  .app-shell {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .navbar {
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-
-  .nav-content {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0.875rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .brand-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-    color: var(--color-text);
-    font-weight: 700;
-    font-size: 1.125rem;
-  }
-
-  .brand-icon {
-    font-size: 1.25rem;
-  }
-
-  .auth-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .app-footer {
-    margin-top: auto;
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--color-text-muted);
-    font-size: 0.875rem;
-    border-top: 1px solid var(--color-border);
-  }
-</style>

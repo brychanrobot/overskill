@@ -12,7 +12,7 @@ This skill provides an automated, end-to-end recipe for scaffolding, wiring, and
 | Layer | Technology | Key Capabilities / Rules |
 | :--- | :--- | :--- |
 | **Framework & UI** | [SvelteKit](https://svelte.dev) + TypeScript | Modern Svelte 5 runes (`$state`, `$derived`, `$effect`, `Snippet`, `{@render}`), minimal template. |
-| **Styling** | Standard Scoped CSS + CSS Variables (`src/app.css`) | **STRICTLY NO TAILWIND**. Clean, zero-dependency design system, dark mode, mobile-ready. |
+| **Styling & UI Components** | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn-svelte](https://shadcn-svelte.com) | `@tailwindcss/vite`, CSS-first design system, accessible Bits UI component primitives, dark mode ready. |
 | **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Fast, space-efficient, deterministic. **NEVER** invoke `npm`, `yarn`, or `bun`. |
 | **Code Quality** | [Biome](https://biomejs.dev) (`@biomejs/biome`) | Unified Rust-powered linter and formatter. **STRICTLY NO** ESLint or Prettier. |
 | **Testing** | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) | Unit, component, and in-memory Convex testing via Vitest; robust E2E testing via Playwright. |
@@ -49,6 +49,7 @@ Prior to execution or when verifying updates, agents can inspect the latest spec
 - **Svelte LLM Index**: https://svelte.dev/llms.txt
 - **Vercel LLM Index**: https://vercel.com/docs/llms.txt
 - **Biome Standards**: https://biomejs.dev/
+- **shadcn-svelte Docs**: https://shadcn-svelte.com/docs
 
 ---
 
@@ -56,11 +57,11 @@ Prior to execution or when verifying updates, agents can inspect the latest spec
 
 ```mermaid
 flowchart TD
-    S1["1. Idea Interview & System Checks"] --> S2["2. Scaffolding Automation (sv + pnpm)"]
+    S1["1. Idea Interview & System Checks"] --> S2["2. Scaffolding Automation (sv + Tailwind v4 + Biome)"]
     S2 --> S3["3. Testing Setup (Vitest + Playwright)"]
-    S3 --> S4["4. Code Quality Setup (Biome)"]
+    S3 --> S4["4. UI Components Setup (shadcn-svelte)"]
     S4 --> S5["5. Backend & Custom Schema (Convex)"]
-    S5 --> S6["6. Scoped CSS & Auth Wiring (Clerk + Svelte 5)"]
+    S5 --> S6["6. Reactive UI & Auth Wiring (Clerk + Svelte 5)"]
     S6 --> S7["7. Local Verification & Tests (http://localhost:5173)"]
     S7 --> S8["8. Remote GitHub Repo Creation & Licensing"]
     S8 --> S9["9. Production Deployment & Live Phone Link (Vercel)"]
@@ -107,16 +108,16 @@ Common examples to inspire them:
 
 ---
 
-### Step 2: Scaffolding Automation (SvelteKit + Vitest + Playwright)
+### Step 2: Scaffolding Automation (SvelteKit + Tailwind CSS v4 + Vitest + Playwright)
 
-Initialize a minimal SvelteKit project with TypeScript using Svelte's official CLI (`sv`) via `pnpm dlx`, and install official add-ons for **Vitest** and **Playwright**:
+Initialize a minimal SvelteKit project with TypeScript using Svelte's official CLI (`sv`) via `pnpm dlx`, and install official add-ons for **Tailwind CSS v4**, **Vitest**, and **Playwright**:
 
 ```bash
 # 1. Run SvelteKit scaffolding inside the project root
 pnpm dlx sv create . --template minimal --types ts --no-add-ons
 
-# 2. Add Vitest and Playwright using official sv add-ons
-pnpm dlx sv add vitest="usages:unit,component" playwright --install pnpm
+# 2. Add Tailwind CSS v4, Vitest, and Playwright using official sv add-ons
+pnpm dlx sv add tailwindcss vitest="usages:unit,component" playwright --install pnpm
 
 # 3. Install Playwright browser engines
 pnpm exec playwright install --with-deps chromium
@@ -389,142 +390,147 @@ export const load: LayoutServerLoad = ({ locals }) => {
 };
 ```
 
-#### 4. Zero-Dependency CSS Design System: `src/app.css`
+#### 4. Styling & UI Components: Tailwind CSS v4 & shadcn-svelte
 
-Create `src/app.css` providing a clean, modern design system using native CSS variables without Tailwind or external dependencies:
+Tailwind CSS v4 is configured with the official `@tailwindcss/vite` plugin, and `shadcn-svelte` provides accessible, copy-pasteable component primitives built on Bits UI.
+
+##### Configure `vite.config.ts`
+
+Ensure `vite.config.ts` includes the `@tailwindcss/vite` plugin:
+
+```ts
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [tailwindcss(), sveltekit()],
+});
+```
+
+##### Configure `components.json`
+
+Create `components.json` in the project root:
+
+```json
+{
+  "$schema": "https://shadcn-svelte.com/schema.json",
+  "style": "default",
+  "tailwind": {
+    "config": "",
+    "css": "src/app.css",
+    "baseColor": "zinc"
+  },
+  "aliases": {
+    "components": "$lib/components",
+    "utils": "$lib/utils",
+    "ui": "$lib/components/ui",
+    "hooks": "$lib/hooks"
+  },
+  "typescript": true
+}
+```
+
+##### Initialize shadcn-svelte & Core Components
+
+Install core utility packages and add foundational UI primitives:
+
+```bash
+# 1. Install helper dependencies
+pnpm add clsx tailwind-merge bits-ui
+
+# 2. Add accessible UI components on demand
+pnpm dlx shadcn-svelte@latest add button card dialog input badge
+```
+
+##### Configure `src/app.css`
+
+Define Tailwind v4 base styles, shadcn color variables, and the `@theme` token mappings:
 
 ```css
-/* Zero-dependency, modern CSS design system for SvelteKit */
-:root {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+@import "tailwindcss";
 
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
-  --color-text-inverse: #ffffff;
-
-  --color-success: #16a34a;
-  --color-error: #dc2626;
-  --color-error-bg: #fef2f2;
-
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-
-  --transition-fast: 0.15s ease;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --color-bg: #0b0f19;
-    --color-surface: #151d2f;
-    --color-border: #1e293b;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
 
-    --color-text: #f8fafc;
-    --color-text-muted: #94a3b8;
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
 
-    --color-primary: #3b82f6;
-    --color-primary-hover: #60a5fa;
-    --color-primary-light: #1e293b;
+  * {
+    border-color: hsl(var(--border));
+  }
 
-    --color-error-bg: #450a0a;
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100vh;
   }
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-.container {
-  width: 100%;
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem;
-}
-
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 1.5rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  font-size: 0.95rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-decoration: none;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: var(--color-text-inverse);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.input {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  font-size: 0.95rem;
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-.badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.2rem 0.5rem;
-  border-radius: 9999px;
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 }
 ```
 
@@ -559,16 +565,18 @@ Initialize Convex, import `../app.css`, and pass Clerk session tokens to Convex 
 </script>
 
 <ClerkProvider>
-  <div class="app-shell">
-    <header class="navbar">
-      <div class="nav-content">
-        <a href="/" class="brand-link">
-          <span class="brand-icon">⚡</span>
-          <span class="brand-title">My App</span>
+  <div class="min-h-screen flex flex-col bg-background text-foreground">
+    <header class="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-90 transition-opacity">
+          <span class="text-xl">⚡</span>
+          <span>My App</span>
         </a>
-        <nav class="auth-controls">
+        <nav class="flex items-center gap-3">
           <SignedOut>
-            <SignInButton mode="modal" class="btn btn-primary">Sign In</SignInButton>
+            <SignInButton mode="modal" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 transition-colors cursor-pointer">
+              Sign In
+            </SignInButton>
           </SignedOut>
           <SignedIn>
             <UserButton afterSignOutUrl="/" />
@@ -577,68 +585,20 @@ Initialize Convex, import `../app.css`, and pass Clerk session tokens to Convex 
       </div>
     </header>
 
-    <main class="container">
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
       {@render children?.()}
     </main>
 
-    <footer class="app-footer">
-      <p>Built with SvelteKit & Convex</p>
+    <footer class="border-t border-border/40 py-6 text-center text-sm text-muted-foreground">
+      <p>Built with SvelteKit, Convex, Clerk & Tailwind CSS</p>
     </footer>
   </div>
 </ClerkProvider>
-
-<style>
-  .app-shell {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  .navbar {
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .nav-content {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0.875rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .brand-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-    color: var(--color-text);
-    font-weight: 700;
-    font-size: 1.125rem;
-  }
-  .brand-icon {
-    font-size: 1.25rem;
-  }
-  .auth-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .app-footer {
-    margin-top: auto;
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--color-text-muted);
-    font-size: 0.875rem;
-    border-top: 1px solid var(--color-border);
-  }
-</style>
 ```
 
 #### 6. Custom Reactive View: `src/routes/+page.svelte`
 
-Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) using scoped Svelte styles:
+Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) using Tailwind CSS utility classes and modern card layouts:
 
 ```svelte
 <script lang="ts">
@@ -669,58 +629,66 @@ Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) usi
 </script>
 
 <SignedOut>
-  <div class="card hero-card">
-    <h1>Welcome to Your App</h1>
-    <p>Sign in to start creating and saving your items in real time.</p>
-    <SignInButton mode="modal" class="btn btn-primary">Sign In to Get Started</SignInButton>
+  <div class="rounded-xl border border-border bg-card p-12 text-center text-card-foreground shadow-sm max-w-xl mx-auto my-12">
+    <h1 class="text-3xl font-extrabold tracking-tight mb-3">Welcome to Your App</h1>
+    <p class="text-muted-foreground text-base mb-8">Sign in to start creating and saving your items with instant real-time sync.</p>
+    <SignInButton mode="modal" class="inline-flex items-center justify-center rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2 transition-colors cursor-pointer shadow-sm">
+      Sign In to Get Started
+    </SignInButton>
   </div>
 </SignedOut>
 
 <SignedIn>
-  <section class="card">
-    <div class="card-header">
-      <h2>Your Saved Items</h2>
-      <span class="badge">Live Sync</span>
+  <section class="rounded-xl border border-border bg-card p-6 md:p-8 text-card-foreground shadow-sm">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="text-2xl font-bold tracking-tight">Your Saved Items</h2>
+      <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+        Live Sync
+      </span>
     </div>
-    <p class="card-subtitle">Anything you add updates instantly across your phone and computer.</p>
+    <p class="text-sm text-muted-foreground mb-6">Anything you add updates instantly across your phone and computer.</p>
 
-    <form onsubmit={handleSubmit} class="add-form">
+    <form onsubmit={handleSubmit} class="flex gap-2 mb-6">
       <input
         type="text"
         bind:value={newTaskText}
         placeholder="Add a new item..."
         disabled={isSubmitting}
-        class="input"
+        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <button type="submit" disabled={isSubmitting || !newTaskText.trim()} class="btn btn-primary">
+      <button
+        type="submit"
+        disabled={isSubmitting || !newTaskText.trim()}
+        class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-5 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer shrink-0"
+      >
         {isSubmitting ? 'Adding...' : 'Add'}
       </button>
     </form>
 
     {#if $tasks.isLoading}
-      <div class="state-message">
+      <div class="rounded-lg border border-border/50 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
         <p>Loading your items...</p>
       </div>
     {:else if $tasks.error}
-      <div class="state-message error">
+      <div class="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-center text-sm text-destructive">
         <p>Could not load items: {$tasks.error.toString()}</p>
       </div>
     {:else if $tasks.data?.length === 0}
-      <div class="state-message">
+      <div class="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
         <p>No items yet. Type something above and click Add!</p>
       </div>
     {:else}
-      <ul class="item-list">
+      <ul class="divide-y divide-border rounded-lg border border-border overflow-hidden">
         {#each $tasks.data ?? [] as task (task._id)}
-          <li class="item-row">
-            <label class="item-label">
+          <li class="p-4 hover:bg-muted/30 transition-colors">
+            <label class="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={task.isCompleted}
                 onchange={() => toggleTask({ id: task._id })}
-                class="checkbox"
+                class="h-4 w-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
               />
-              <span class="item-title" class:completed={task.isCompleted}>
+              <span class="text-sm font-medium transition-all {task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}">
                 {task.text}
               </span>
             </label>
@@ -730,84 +698,6 @@ Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) usi
     {/if}
   </section>
 </SignedIn>
-
-<style>
-  .hero-card {
-    text-align: center;
-    padding: 3rem 1.5rem;
-  }
-  .hero-card h1 {
-    margin-top: 0;
-    font-size: 2rem;
-  }
-  .hero-card p {
-    color: var(--color-text-muted);
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
-  }
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.25rem;
-  }
-  .card-header h2 {
-    margin: 0;
-  }
-  .card-subtitle {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
-  }
-  .add-form {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-  .item-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .item-row {
-    padding: 0.875rem 0.5rem;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .item-row:last-child {
-    border-bottom: none;
-  }
-  .item-label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-  }
-  .checkbox {
-    width: 1.25rem;
-    height: 1.25rem;
-    accent-color: var(--color-primary);
-  }
-  .item-title {
-    font-size: 1rem;
-    color: var(--color-text);
-  }
-  .completed {
-    text-decoration: line-through;
-    color: var(--color-text-muted);
-  }
-  .state-message {
-    padding: 2rem;
-    text-align: center;
-    color: var(--color-text-muted);
-    background: var(--color-bg);
-    border-radius: var(--radius-md);
-  }
-  .state-message.error {
-    color: var(--color-error);
-    background: var(--color-error-bg);
-  }
-</style>
 ```
 
 ---
@@ -971,7 +861,7 @@ Present the completed application to the user with enthusiasm, clear instruction
 ## Completion Verification Checklist
 
 - [ ] `pnpm --version` confirmed `pnpm` is strictly used (no `npm` or `yarn` lockfiles created).
-- [ ] Strictly zero Tailwind CSS or PostCSS dependencies installed; clean scoped CSS and `src/app.css` used.
+- [ ] Tailwind CSS v4 configured with `@tailwindcss/vite`; `shadcn-svelte` components and `src/app.css` configured.
 - [ ] No `eslint` or `prettier` packages or configuration files exist in the project root.
 - [ ] `biome.json` is configured and `pnpm run check` passes without warnings or formatting errors.
 - [ ] Vitest unit tests and Playwright E2E tests are configured and pass (`pnpm run test`).
@@ -980,4 +870,5 @@ Present the completed application to the user with enthusiasm, clear instruction
 - [ ] Remote GitHub repository created via `gh repo create` (with MIT license if public).
 - [ ] Project successfully deployed to Vercel with production environment variables verified.
 - [ ] Live shareable Vercel URL and local preview URL presented clearly to the user.
+
 

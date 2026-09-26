@@ -26,58 +26,66 @@
 </script>
 
 <SignedOut>
-  <div class="card hero-card">
-    <h1>Welcome to Your App</h1>
-    <p>Sign in to start creating and saving your items in real time.</p>
-    <SignInButton mode="modal" class="btn btn-primary">Sign In to Get Started</SignInButton>
+  <div class="rounded-xl border border-border bg-card p-12 text-center text-card-foreground shadow-sm max-w-xl mx-auto my-12">
+    <h1 class="text-3xl font-extrabold tracking-tight mb-3">Welcome to Your App</h1>
+    <p class="text-muted-foreground text-base mb-8">Sign in to start creating and saving your items with instant real-time sync.</p>
+    <SignInButton mode="modal" class="inline-flex items-center justify-center rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2 transition-colors cursor-pointer shadow-sm">
+      Sign In to Get Started
+    </SignInButton>
   </div>
 </SignedOut>
 
 <SignedIn>
-  <section class="card">
-    <div class="card-header">
-      <h2>Your Saved Items</h2>
-      <span class="badge">Live Sync</span>
+  <section class="rounded-xl border border-border bg-card p-6 md:p-8 text-card-foreground shadow-sm">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="text-2xl font-bold tracking-tight">Your Saved Items</h2>
+      <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+        Live Sync
+      </span>
     </div>
-    <p class="card-subtitle">Anything you add updates instantly across your phone and computer.</p>
+    <p class="text-sm text-muted-foreground mb-6">Anything you add updates instantly across your phone and computer.</p>
 
-    <form onsubmit={handleSubmit} class="add-form">
+    <form onsubmit={handleSubmit} class="flex gap-2 mb-6">
       <input
         type="text"
         bind:value={newTaskText}
         placeholder="Add a new item..."
         disabled={isSubmitting}
-        class="input"
+        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <button type="submit" disabled={isSubmitting || !newTaskText.trim()} class="btn btn-primary">
+      <button
+        type="submit"
+        disabled={isSubmitting || !newTaskText.trim()}
+        class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-5 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer shrink-0"
+      >
         {isSubmitting ? 'Adding...' : 'Add'}
       </button>
     </form>
 
     {#if $tasks.isLoading}
-      <div class="state-message">
+      <div class="rounded-lg border border-border/50 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
         <p>Loading your items...</p>
       </div>
     {:else if $tasks.error}
-      <div class="state-message error">
+      <div class="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-center text-sm text-destructive">
         <p>Could not load items: {$tasks.error.toString()}</p>
       </div>
     {:else if $tasks.data?.length === 0}
-      <div class="state-message">
+      <div class="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
         <p>No items yet. Type something above and click Add!</p>
       </div>
     {:else}
-      <ul class="item-list">
+      <ul class="divide-y divide-border rounded-lg border border-border overflow-hidden">
         {#each $tasks.data ?? [] as task (task._id)}
-          <li class="item-row">
-            <label class="item-label">
+          <li class="p-4 hover:bg-muted/30 transition-colors">
+            <label class="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={task.isCompleted}
                 onchange={() => toggleTask({ id: task._id })}
-                class="checkbox"
+                class="h-4 w-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
               />
-              <span class="item-title" class:completed={task.isCompleted}>
+              <span class="text-sm font-medium transition-all {task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}">
                 {task.text}
               </span>
             </label>
@@ -87,96 +95,3 @@
     {/if}
   </section>
 </SignedIn>
-
-<style>
-  .hero-card {
-    text-align: center;
-    padding: 3rem 1.5rem;
-  }
-
-  .hero-card h1 {
-    margin-top: 0;
-    font-size: 2rem;
-  }
-
-  .hero-card p {
-    color: var(--color-text-muted);
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.25rem;
-  }
-
-  .card-header h2 {
-    margin: 0;
-  }
-
-  .card-subtitle {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
-  }
-
-  .add-form {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .item-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .item-row {
-    padding: 0.875rem 0.5rem;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .item-row:last-child {
-    border-bottom: none;
-  }
-
-  .item-label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-  }
-
-  .checkbox {
-    width: 1.25rem;
-    height: 1.25rem;
-    accent-color: var(--color-primary);
-  }
-
-  .item-title {
-    font-size: 1rem;
-    color: var(--color-text);
-  }
-
-  .completed {
-    text-decoration: line-through;
-    color: var(--color-text-muted);
-  }
-
-  .state-message {
-    padding: 2rem;
-    text-align: center;
-    color: var(--color-text-muted);
-    background: var(--color-bg);
-    border-radius: var(--radius-md);
-  }
-
-  .state-message.error {
-    color: var(--color-error);
-    background: var(--color-error-bg);
-  }
-</style>
