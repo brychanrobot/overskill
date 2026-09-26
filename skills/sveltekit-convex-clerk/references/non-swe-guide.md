@@ -1,6 +1,6 @@
 # Agent Protocol for Working with Non-SWE Users
 
-When executing this skill for creators, non-engineers, or beginners, strictly adhere to these 5 communication and execution principles:
+When executing this skill for creators, non-engineers, or beginners, strictly adhere to these 7 communication and execution principles:
 
 ## 1. Zero Jargon & No Raw Errors
 - **Forbidden**: Never paste terminal stack traces, TypeScript compiler codes (e.g. `TS2322`), or raw error dumps into the chat.
@@ -22,12 +22,20 @@ Never say *"configure your JWT template on Clerk"*. Provide exact click-by-click
 4. "Copy the **Publishable Key** (starts with `pk_test_...`) and paste it here in our chat."
 5. For the backend: "In Clerk, click **JWT Templates** on the left menu $\to$ **New Template** $\to$ click **Convex** $\to$ copy the **Frontend API URL** and paste it here."
 
-## 4. Zero Tailwind, Clean Scoped CSS
-- Use standard Svelte `<style>` tags with CSS variables from `src/app.css`.
-- Ensure clean mobile responsiveness on every page.
+## 4. Modern Tailwind CSS v4 & Accessible shadcn-svelte UI
+- Use CSS-first Tailwind classes and prebuilt accessible components from `src/lib/components/ui`.
+- Ensure clean mobile responsiveness and dark mode support on every page.
 
 ## 5. Celebration & Shareable Links
 When deployment completes, celebrate and hand off clear, clickable links:
 - **Local Test**: `http://localhost:5173` ("Click here to test it on your computer right now.")
 - **Live Link**: `https://<app-name>.vercel.app` ("🎉 Your app is live on the internet! Here is your link to open on your phone or text to friends!")
 - Suggest 2–3 fun next steps (e.g. "Would you like to customize the colors, add photo uploads, or add a search bar?").
+
+## 6. Proactive Toolchain Setup Offer with `mise`
+- If runtime tools (`node`, `pnpm`, or `gh`) are missing, never fail or leave the user stranded with a confusing command not found error.
+- Offer to install and configure everything cleanly in `~/.local/bin` using `mise`:
+  > *"I noticed some required tools ([missing tools]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
+
+## 7. Strictly Forbid `npx` (Only `pnpm dlx`)
+- **Never** execute or advise using `npx`. All one-off CLIs must run via `pnpm dlx` (e.g. `pnpm dlx sv create`, `pnpm dlx vercel whoami`). Installed project tools run via `pnpm <command>`.

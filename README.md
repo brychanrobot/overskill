@@ -73,6 +73,26 @@ curl -sSL https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/s
 
 ---
 
+## Toolchain Setup with `mise` (Recommended)
+
+To ensure consistent, reproducible execution without requiring root (`sudo`) permissions or polluting system directories, we recommend [`mise`](https://mise.jdx.dev) to manage essential developer toolchains (`gh`, `node`, and `pnpm`) directly in `~/.local/bin`:
+
+```bash
+# 1. Install mise to ~/.local/bin
+curl -fsSL https://mise.run | sh
+
+# 2. Ensure ~/.local/bin and shims are in your PATH
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+
+# 3. Install GitHub CLI, Node.js LTS, and pnpm
+mise use --global gh@latest node@lts pnpm@latest
+```
+
+> [!NOTE]
+> `overskill` skills strictly forbid `npx`. Always use `pnpm dlx` for ad-hoc tool execution (e.g., `pnpm dlx sv create`) and `pnpm <command>` for installed dependencies.
+
+---
+
 ## Repository Structure
 
 ```text
@@ -92,5 +112,5 @@ overskill/
 
 1. **Self-Contained `SKILL.md`**: The primary `SKILL.md` file must be complete on its own so that fetching its GitHub raw URL provides everything an agent needs to execute without external file dependencies.
 2. **Standard YAML Frontmatter**: Must include `name` (lowercase, kebab-case) and `description` (third-person trigger explanation).
-3. **Strict Tooling Rules**: Enforce modern, deterministic package managers (e.g. strict `pnpm`) and unified toolchains (e.g. `Biome` instead of legacy ESLint/Prettier combinations).
+3. **Strict Tooling Rules**: Enforce modern, deterministic package managers (strict `pnpm`, **strictly forbidding `npx` in favor of `pnpm dlx`**) and unified toolchains (e.g. `Biome` instead of legacy ESLint/Prettier combinations, and `mise` for toolchain setup in `~/.local/bin`).
 4. **Verifiable Steps**: Provide automated and manual verification commands at every milestone.

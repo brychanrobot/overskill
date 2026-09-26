@@ -11,10 +11,11 @@ This skill provides an automated, end-to-end recipe for scaffolding, wiring, and
 
 | Layer | Technology | Key Capabilities / Rules |
 | :--- | :--- | :--- |
+| **Toolchain & CLI Runtime** | [`mise`](https://mise.jdx.dev) (Recommended) | Fast toolchain manager in `~/.local/bin`. Installs and manages `node` (LTS), `pnpm`, and `gh` in user space without sudo. |
 | **Framework & UI** | [SvelteKit](https://svelte.dev) + TypeScript | Modern Svelte 5 runes (`$state`, `$derived`, `$effect`, `Snippet`, `{@render}`), minimal template. |
 | **Build Engine & Bundler** | [Vite](https://vite.dev) (`vite.config.ts`) | Instant HMR dev server, official `@tailwindcss/vite` compiler plugin, Vitest runner, production SSR bundling. |
 | **Styling & UI Components** | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn-svelte](https://shadcn-svelte.com) | `@tailwindcss/vite`, CSS-first design system, accessible Bits UI component primitives, dark mode ready. |
-| **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Fast, space-efficient, deterministic. **NEVER** invoke `npm`, `yarn`, or `bun`. |
+| **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Fast, space-efficient, deterministic. **FORBIDDEN: NEVER use `npx`, `npm`, `yarn`, or `bun`. Use ONLY `pnpm dlx` for ad-hoc execution and `pnpm <cmd>` for project packages.** |
 | **Code Quality** | [Biome](https://biomejs.dev) (`@biomejs/biome`) | Unified Rust-powered linter and formatter. **STRICTLY NO** ESLint or Prettier. |
 | **Testing** | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) | Unit, component, and in-memory Convex testing via Vitest; robust E2E testing via Playwright. |
 | **Database & Realtime** | [Convex](https://convex.dev) (`convex`, `convex-svelte`) | Real-time reactive queries over WebSocket, TypeScript schema, server functions. |
@@ -38,6 +39,11 @@ When executing this skill for non-software engineers, solo creators, or beginner
 4. **Milestone Celebrations & Clickable Links**:
    - Always present a clickable local preview link: `http://localhost:5173`.
    - Always present the live mobile-friendly Vercel production link: `https://<app>.vercel.app` with instructions on how to test logging in on their phone.
+5. **Proactive Toolchain Setup Offer with `mise`**:
+   - If `node`, `pnpm`, or `gh` are missing, never fail or leave the user stranded with a missing command error.
+   - Gently offer to set up the entire toolchain using `mise` in `~/.local/bin` (no sudo or admin privileges required).
+6. **Strictly Forbid `npx` (Only `pnpm dlx`)**:
+   - **Never** invoke or suggest `npx`. All one-off CLIs must run via `pnpm dlx` (e.g., `pnpm dlx sv create`, `pnpm dlx vercel whoami`, `pnpm dlx convex dev`). Project packages run via `pnpm <command>`.
 
 ---
 
@@ -51,6 +57,7 @@ Prior to execution or when verifying updates, agents can inspect the latest spec
 - **Vercel LLM Index**: https://vercel.com/docs/llms.txt
 - **Biome Standards**: https://biomejs.dev/
 - **shadcn-svelte Docs**: https://shadcn-svelte.com/docs
+- **Mise Documentation**: https://mise.jdx.dev
 
 ---
 
@@ -58,7 +65,7 @@ Prior to execution or when verifying updates, agents can inspect the latest spec
 
 ```mermaid
 flowchart TD
-    S1["1. Idea Interview & System Checks"] --> S2["2. Scaffolding Automation (sv + Tailwind v4 + Biome)"]
+    S1["1. Toolchain & Idea Discovery"] --> S2["2. Scaffolding Automation (sv + Tailwind v4 + Biome)"]
     S2 --> S3["3. Testing Setup (Vitest + Playwright)"]
     S3 --> S4["4. UI Components Setup (shadcn-svelte)"]
     S4 --> S5["5. Backend & Custom Schema (Convex)"]
@@ -72,30 +79,63 @@ flowchart TD
 
 ### Step 1: System Prerequisites & Idea Discovery
 
-#### 1. Verify Developer CLI States
-Before creating any files, verify that local developer CLI tools are authenticated and available:
+#### 1. Toolchain & CLI Availability Check (Node, pnpm, gh with mise)
+Verify that the core runtime tools (`node`, `pnpm`, `gh`) are installed on the host:
+
+```bash
+# Check presence of required toolchains
+command -v node
+command -v pnpm
+command -v gh
+```
+
+> [!IMPORTANT]
+> **Proactive Toolchain Setup Offer with `mise`**:
+> If any of these tools (`node`, `pnpm`, or `gh`) are missing, the agent MUST offer to set up the toolchain automatically using `mise` in `~/.local/bin`:
+> > *"I noticed some required tools ([missing tools, e.g. Node.js, pnpm, or GitHub CLI]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
+>
+> If the user accepts (or in autonomous agent mode), execute:
+> ```bash
+> # 1. Install mise to ~/.local/bin if not already present
+> if ! command -v mise >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/mise" ]; then
+>   curl -fsSL https://mise.run | sh
+> fi
+>
+> # 2. Ensure ~/.local/bin and mise shims are available in PATH
+> export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+>
+> # 3. Install required toolchain (Node.js LTS, pnpm, and GitHub CLI)
+> "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest
+>
+> # 4. Activate mise for the current shell session
+> eval "$("$HOME/.local/bin/mise" activate bash)"
+> ```
+
+#### 2. Verify Developer CLI Authentication States
+Before creating any files, verify that local developer CLI tools are authenticated and available.
+**STRICT RULE: NEVER USE `npx`. ALWAYS USE `pnpm dlx`!**
 
 ```bash
 # 1. Verify GitHub CLI authentication
 gh auth status
 
-# 2. Verify pnpm is installed
+# 2. Verify pnpm is installed and check version
 pnpm --version
 
-# 3. Verify Vercel CLI is authenticated
+# 3. Verify Vercel CLI is authenticated (FORBIDDEN: NEVER use npx vercel)
 pnpm dlx vercel whoami
 
-# 4. Verify Convex CLI is authenticated
+# 4. Verify Convex CLI is authenticated (FORBIDDEN: NEVER use npx convex)
 pnpm dlx convex whoami
 ```
 
 > [!IMPORTANT]
 > If any tool reports unauthenticated status, assist the user calmly:
 > - For GitHub: Run `gh auth login`
-> - For Vercel: Run `pnpm dlx vercel login`
-> - For Convex: Run `pnpm dlx convex login`
+> - For Vercel: Run `pnpm dlx vercel login` (FORBIDDEN: never `npx vercel login`)
+> - For Convex: Run `pnpm dlx convex login` (FORBIDDEN: never `npx convex login`)
 
-#### 2. The Idea Interview (For Non-SWEs & Creators)
+#### 3. The Idea Interview (For Non-SWEs & Creators)
 Ask the user in plain English what they would like to build:
 > *"What kind of app would you like to build today, and what kinds of things do you want people to save, view, or track?"*
 

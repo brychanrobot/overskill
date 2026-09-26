@@ -1,0 +1,85 @@
+# Toolchain Management with `mise`
+
+[`mise`](https://mise.jdx.dev) (formerly `rtx`) is a fast, polyglot tool version and environment manager written in Rust. It installs toolchains in user space (`~/.local/share/mise` and `~/.local/bin`) without needing `sudo` or system package manager privileges.
+
+In the `sveltekit-convex-clerk` workflow, `mise` is the recommended mechanism for installing and pinning runtime tools:
+- **`node`** (Node.js LTS, e.g. 20.x or 22.x)
+- **`pnpm`** (Strict package manager)
+- **`gh`** (GitHub CLI for repository creation and auth)
+
+---
+
+## 1. Quick Installation into `~/.local/bin`
+
+Install `mise` as a standalone binary into `~/.local/bin`:
+
+```bash
+# Standalone install script (installs directly to ~/.local/bin/mise)
+curl -fsSL https://mise.run | sh
+```
+
+Verify that `~/.local/bin` is in the user's `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+```
+
+To persist in the shell profile (e.g., `~/.bashrc` or `~/.zshrc`):
+
+```bash
+# In ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/.local/bin:$PATH"
+eval "$(mise activate bash)"   # or: eval "$(mise activate zsh)"
+```
+
+---
+
+## 2. Installing Required Tools
+
+Install the essential developer stack globally with a single command:
+
+```bash
+# Install and activate Node.js LTS, pnpm, and GitHub CLI
+~/.local/bin/mise use --global node@lts pnpm@latest gh@latest
+```
+
+Verify versions:
+
+```bash
+node -v   # e.g. v22.x.x
+pnpm -v   # e.g. 10.x.x or 9.x.x
+gh --version
+```
+
+---
+
+## 3. Project-Level Pinning (`.mise.toml`)
+
+Place a `.mise.toml` file in the project root to guarantee that all developers and agents use matching versions:
+
+```toml
+[tools]
+node = "lts"
+pnpm = "latest"
+gh = "latest"
+```
+
+When entering the project directory, running `mise install` installs any missing pinned toolchains automatically.
+
+---
+
+## 4. Agent Autonomous Offer Protocol (For Non-SWEs)
+
+When an agent detects that `node`, `pnpm`, or `gh` is missing:
+1. It does **not** fail or output error logs.
+2. It politely asks the user:
+   > *"I noticed some required tools ([missing tools]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
+3. Upon approval (or when running autonomously), it runs the non-interactive setup sequence:
+   ```bash
+   if ! command -v mise >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/mise" ]; then
+     curl -fsSL https://mise.run | sh
+   fi
+   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+   "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest
+   eval "$("$HOME/.local/bin/mise" activate bash)"
+   ```
