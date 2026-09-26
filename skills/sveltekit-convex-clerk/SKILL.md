@@ -1,11 +1,11 @@
 ---
 name: sveltekit-convex-clerk
-description: Scaffolds, configures, wires, creates a GitHub repository for, and deploys full-stack SvelteKit applications with modern Svelte 5 runes, strict pnpm, Biome linting, Convex reactive database, Clerk authentication, and Vercel hosting. Use when creating, scaffolding, or deploying a new SvelteKit project with Convex and Clerk.
+description: Scaffolds, configures, wires, creates a GitHub repository for, and deploys full-stack SvelteKit applications with modern Svelte 5 runes, strict pnpm, Biome linting, Vitest unit testing, Playwright E2E testing, Convex reactive database, Clerk authentication, and Vercel hosting. Use when creating, scaffolding, or deploying a new SvelteKit project with Convex and Clerk.
 ---
 
-# SvelteKit Full-Stack Pipeline (Convex + Clerk + Biome + Vercel)
+# SvelteKit Full-Stack Pipeline (Convex + Clerk + Biome + Vitest + Playwright + Vercel)
 
-This skill provides an automated, end-to-end recipe for scaffolding, wiring, and deploying a modern full-stack web application. It enforces strict architectural and tooling constraints to guarantee speed, reactivity, code quality, and reliable deployments.
+This skill provides an automated, end-to-end recipe for scaffolding, wiring, and deploying a modern full-stack web application. It enforces strict architectural and tooling constraints to guarantee speed, reactivity, code quality, automated testing, and reliable deployments.
 
 ## Architecture & Technology Stack
 
@@ -14,6 +14,7 @@ This skill provides an automated, end-to-end recipe for scaffolding, wiring, and
 | **Framework & UI** | [SvelteKit](https://svelte.dev) + TypeScript | Modern Svelte 5 runes (`$state`, `$derived`, `$effect`, `Snippet`, `{@render}`), minimal template. |
 | **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Fast, space-efficient, deterministic. **NEVER** invoke `npm`, `yarn`, or `bun`. |
 | **Code Quality** | [Biome](https://biomejs.dev) (`@biomejs/biome`) | Unified Rust-powered linter and formatter. **STRICTLY NO** ESLint or Prettier. |
+| **Testing** | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) | Unit, component, and in-memory Convex testing via Vitest; robust E2E testing via Playwright. |
 | **Database & Realtime** | [Convex](https://convex.dev) (`convex`, `convex-svelte`) | Real-time reactive queries over WebSocket, TypeScript schema, server functions. |
 | **Authentication** | [Clerk](https://clerk.com) (`svelte-clerk`) | Secure auth, JWT session templates, reactive runes, prebuilt UI controls. |
 | **VCS & Hosting** | [GitHub CLI](https://cli.github.com) + [Vercel](https://vercel.com) | Automated repository creation (`gh repo create`) and headless zero-config deployments (`vercel --prod`). |
@@ -37,12 +38,13 @@ Prior to execution or when verifying updates, agents can inspect the latest spec
 ```mermaid
 flowchart TD
     S1["1. System Prerequisites Check"] --> S2["2. Scaffolding Automation (sv + pnpm)"]
-    S2 --> S3["3. Code Quality Setup (Biome)"]
-    S3 --> S4["4. Backend & Schema Wiring (Convex)"]
-    S4 --> S5["5. Frontend & Auth Wiring (Clerk + Svelte 5)"]
-    S5 --> S6["6. Local Verification (convex dev --once)"]
-    S6 --> S7["7. Remote GitHub Repo Creation (gh repo create)"]
-    S7 --> S8["8. Production Deployment & Env Sync (Vercel)"]
+    S2 --> S3["3. Testing Setup (Vitest + Playwright)"]
+    S3 --> S4["4. Code Quality Setup (Biome)"]
+    S4 --> S5["5. Backend & Schema Wiring (Convex)"]
+    S5 --> S6["6. Frontend & Auth Wiring (Clerk + Svelte 5)"]
+    S6 --> S7["7. Local Verification (convex dev + vitest)"]
+    S7 --> S8["8. Remote GitHub Repo Creation & Licensing"]
+    S8 --> S9["9. Production Deployment & Env Sync (Vercel)"]
 ```
 
 ---
@@ -74,13 +76,19 @@ npx convex whoami
 
 ---
 
-### Step 2: Scaffolding Automation
+### Step 2: Scaffolding Automation (SvelteKit + Vitest + Playwright)
 
-Initialize a minimal SvelteKit project with TypeScript using Svelte's official CLI (`sv`) via `pnpm dlx`:
+Initialize a minimal SvelteKit project with TypeScript using Svelte's official CLI (`sv`) via `pnpm dlx`, and install official add-ons for **Vitest** and **Playwright**:
 
 ```bash
-# Run SvelteKit scaffolding inside the project root
+# 1. Run SvelteKit scaffolding inside the project root
 pnpm dlx sv create . --template minimal --types ts --no-add-ons
+
+# 2. Add Vitest and Playwright using official sv add-ons
+pnpm dlx sv add vitest="usages:unit,component" playwright --install pnpm
+
+# 3. Install Playwright browser engines
+pnpm exec playwright install --with-deps chromium
 ```
 
 Ensure no legacy configuration files or dependencies were introduced. If any `.eslintrc*`, `.prettier*`, or `eslint*` dependencies exist, remove them immediately:
@@ -158,9 +166,9 @@ Overwrite `biome.json` with recommended rules tailored for SvelteKit and TypeScr
 }
 ```
 
-#### Add Biome Scripts to `package.json`
+#### Add Scripts to `package.json`
 
-Add the following scripts to `package.json`:
+Add the following unified scripts to `package.json`:
 
 ```json
 "scripts": {
@@ -170,9 +178,38 @@ Add the following scripts to `package.json`:
   "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && biome check .",
   "lint": "biome lint .",
   "format": "biome format --write .",
-  "lint:fix": "biome check --write ."
+  "lint:fix": "biome check --write .",
+  "test": "pnpm run test:unit && pnpm run test:e2e",
+  "test:unit": "vitest run",
+  "test:e2e": "playwright test"
 }
 ```
+
+#### Baseline Test Setup
+
+Ensure baseline test files are in place so continuous testing passes immediately:
+
+- **Unit Test**: `src/demo.test.ts`
+  ```ts
+  import { describe, expect, it } from 'vitest';
+
+  describe('sanity test', () => {
+    it('verifies vitest test runner', () => {
+      expect(1 + 1).toBe(2);
+    });
+  });
+  ```
+
+- **E2E Test**: `e2e/demo.test.ts`
+  ```ts
+  import { expect, test } from '@playwright/test';
+
+  test('homepage renders navigation and auth controls', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header')).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+  });
+  ```
 
 ---
 
@@ -564,10 +601,11 @@ Initialize Convex and pass Clerk session tokens to Convex reactively inside Svel
    npx convex env set CLERK_FRONTEND_API_URL https://<your-fapi-url>.clerk.accounts.dev
    ```
 
-3. **Verify Code Quality**:
+3. **Verify Code Quality & Unit Tests**:
    ```bash
    pnpm run lint
    pnpm run format
+   pnpm run test:unit
    ```
 
 ---
@@ -642,12 +680,20 @@ gh repo view
 
 ### Step 8: Headless Vercel Deployment & Environment Variable Sync
 
-1. **Deploy Headlessly to Vercel**:
+1. **Pre-Deployment Verification Gate (Lints & Tests)**:
+   Always verify lints, typechecks, and tests pass before initiating deployment:
+   ```bash
+   pnpm run check
+   pnpm run test:unit
+   pnpm run test:e2e
+   ```
+
+2. **Deploy Headlessly to Vercel**:
    ```bash
    npx vercel --prod --yes
    ```
 
-2. **Synchronize Production Environment Variables on Vercel**:
+3. **Synchronize Production Environment Variables on Vercel**:
    Set the exact required production environment variables using the Vercel CLI:
    ```bash
    # Add Public Convex URL
@@ -660,7 +706,7 @@ gh repo view
    npx vercel env add CLERK_SECRET_KEY production
    ```
 
-3. **Trigger Final Production Build**:
+4. **Trigger Final Production Build**:
    ```bash
    npx vercel --prod --yes
    ```
@@ -672,7 +718,9 @@ gh repo view
 - [ ] `pnpm --version` confirmed `pnpm` is strictly used (no `npm` or `yarn` lockfiles created).
 - [ ] No `eslint` or `prettier` packages or configuration files exist in the project root.
 - [ ] `biome.json` is configured and `pnpm run check` passes without warnings or formatting errors.
+- [ ] Vitest unit tests and Playwright E2E tests are configured and pass (`pnpm run test`).
 - [ ] `convex/auth.config.ts` matches Clerk's Frontend API URL.
 - [ ] `src/routes/+layout.svelte` establishes reactive token passing from `useClerkContext()` to `setupConvex()`.
-- [ ] Remote GitHub repository created via `gh repo create` and synchronized.
+- [ ] Remote GitHub repository created via `gh repo create` (with MIT license if public).
 - [ ] Project successfully deployed to Vercel with production environment variables verified.
+

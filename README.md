@@ -10,7 +10,7 @@ Every skill in this repository is built following the official Antigravity Custo
 
 | Skill | Stack / Focus | Description | Raw URL for AGY |
 | :--- | :--- | :--- | :--- |
-| [`sveltekit-convex-clerk`](./skills/sveltekit-convex-clerk/SKILL.md) | SvelteKit, TypeScript, Biome, Convex, Clerk, Vercel | Scaffolds, configures, wires, and deploys full-stack reactive SvelteKit applications with real-time backend and auth. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md) |
+| [`sveltekit-convex-clerk`](./skills/sveltekit-convex-clerk/SKILL.md) | SvelteKit, TypeScript, Biome, Vitest, Playwright, Convex, Clerk, Vercel | Scaffolds, configures, wires, creates a GitHub repo for, tests, and deploys full-stack reactive SvelteKit applications with real-time backend and auth. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md) |
 
 ---
 
