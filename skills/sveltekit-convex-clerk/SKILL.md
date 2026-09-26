@@ -62,7 +62,7 @@ flowchart TD
     S3 --> S4["4. UI Components Setup (shadcn-svelte)"]
     S4 --> S5["5. Backend & Custom Schema (Convex)"]
     S5 --> S6["6. Reactive UI & Auth Wiring (Clerk + Svelte 5)"]
-    S6 --> S7["7. Local Verification & Tests (http://localhost:5173)"]
+    S6 --> S7["7. Local Verification & Visual Proof (Screenshots + GIF)"]
     S7 --> S8["8. Remote GitHub Repo Creation & Licensing"]
     S8 --> S9["9. Production Deployment & Live Phone Link (Vercel)"]
 ```
@@ -733,6 +733,34 @@ pnpm run format
 pnpm run test:unit
 ```
 
+#### 4. Visual Proof & Walkthrough Media (Screenshots & Animated GIFs)
+
+Non-SWE creators and users benefit immensely from seeing visual proof of their working application. Use the standalone walkthrough recorder `scripts/record-demo.ts` to automatically capture high-definition screenshots and an animated demo GIF:
+
+```bash
+# 1. Place the walkthrough recorder in scripts/
+mkdir -p scripts
+cp templates/record-demo.ts scripts/record-demo.ts 2>/dev/null || true
+
+# 2. Run the recorder with the dev server running (http://localhost:5173)
+node scripts/record-demo.ts
+```
+
+> [!TIP]
+> **Walkthrough Artifact Media**:
+> When composing your `walkthrough.md` artifact:
+> 1. Copy the generated `static/demo.gif` and screenshots to your Antigravity conversation artifact directory (`<appDataDir>/brain/<conversation-id>/`).
+> 2. Embed them in `walkthrough.md`:
+>    ```markdown
+>    ## Interactive Flow Demo
+>    ![Live Demo](file:///home/bryant/.gemini/antigravity/brain/<conversation-id>/demo.gif)
+>
+>    ### Screenshots
+>    | Initial Screen | Real-Time Sync |
+>    | :---: | :---: |
+>    | ![Step 1](file:///path/to/step-1-initial.png) | ![Step 2](file:///path/to/step-2-completed.png) |
+>    ```
+
 ---
 
 ### Step 7: Remote GitHub Repository Creation & Licensing
@@ -869,6 +897,7 @@ Present the completed application to the user with enthusiasm, clear instruction
 - [ ] No `eslint` or `prettier` packages or configuration files exist in the project root.
 - [ ] `biome.json` is configured and `pnpm run check` passes without warnings or formatting errors.
 - [ ] Vitest unit tests and Playwright E2E tests are configured and pass (`pnpm run test`).
+- [ ] Visual proof captured (screenshots and demo GIF via Playwright + ffmpeg) and embedded in walkthrough artifact.
 - [ ] `convex/auth.config.ts` matches Clerk's Frontend API URL.
 - [ ] `src/routes/+layout.svelte` establishes reactive token passing from `useClerkContext()` to `setupConvex()`.
 - [ ] Remote GitHub repository created via `gh repo create` (with MIT license if public).
