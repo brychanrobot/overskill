@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and output artifacts
+dist/
+build/
+.svelte-kit/
+.vercel/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Convex
+.convex/
+
+# Logs and system
+*.log
+.DS_Store
+.turbo/
