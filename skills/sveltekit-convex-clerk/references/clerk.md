@@ -27,3 +27,29 @@ In SvelteKit applications, Clerk handles user authentication and session managem
 PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 ```
+
+---
+
+## Clerk CLI (`pnpm dlx clerk`)
+
+Manage Clerk authentication directly from your terminal using the Clerk CLI:
+
+```bash
+# Authenticate CLI session
+pnpm dlx clerk auth login
+
+# Check authentication and linked project
+pnpm dlx clerk whoami
+
+# Check integration health
+pnpm dlx clerk doctor
+
+# List available Clerk apps
+pnpm dlx clerk apps list --json
+
+# Deploy to production
+pnpm dlx clerk deploy
+```
+
+> [!NOTE]
+> Strictly avoid `npx clerk`. In accordance with `overskill` rules, always use `pnpm dlx clerk`.

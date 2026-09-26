@@ -22,6 +22,8 @@ Never say *"configure your JWT template on Clerk"*. Provide exact click-by-click
 4. "Copy the **Publishable Key** (starts with `pk_test_...`) and paste it here in our chat."
 5. For the backend: "In Clerk, click **JWT Templates** on the left menu $\to$ **New Template** $\to$ click **Convex** $\to$ copy the **Frontend API URL** and paste it here."
 
+*Alternative (Terminal)*: If the user prefers connecting directly via terminal, they can run `pnpm dlx clerk auth login` to link their application without copy-pasting API keys.
+
 ## 4. Modern Tailwind CSS v4 & Accessible shadcn-svelte UI
 - Use CSS-first Tailwind classes and prebuilt accessible components from `src/lib/components/ui`.
 - Ensure clean mobile responsiveness and dark mode support on every page.

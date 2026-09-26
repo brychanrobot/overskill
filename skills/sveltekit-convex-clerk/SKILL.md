@@ -50,7 +50,7 @@ When executing this skill for non-software engineers, solo creators, or beginner
 ## Machine-Readable Reference Endpoints
 
 Prior to execution or when verifying updates, agents can inspect the latest specifications:
-- **Clerk Skill**: https://clerk.com/SKILL.md
+- **Clerk Skills**: https://github.com/clerk/skills | https://clerk.com/SKILL.md
 - **Convex LLM Index**: https://docs.convex.dev/llms.txt
 - **Convex Svelte Guide**: https://docs.convex.dev/client/svelte/overview.md
 - **Svelte LLM Index**: https://svelte.dev/llms.txt
@@ -127,6 +127,9 @@ pnpm dlx vercel whoami
 
 # 4. Verify Convex CLI is authenticated (FORBIDDEN: NEVER use npx convex)
 pnpm dlx convex whoami
+
+# 5. Verify Clerk CLI is authenticated (FORBIDDEN: NEVER use npx clerk)
+pnpm dlx clerk whoami
 ```
 
 > [!IMPORTANT]
@@ -134,6 +137,7 @@ pnpm dlx convex whoami
 > - For GitHub: Run `gh auth login`
 > - For Vercel: Run `pnpm dlx vercel login` (FORBIDDEN: never `npx vercel login`)
 > - For Convex: Run `pnpm dlx convex login` (FORBIDDEN: never `npx convex login`)
+> - For Clerk: Run `pnpm dlx clerk auth login` (FORBIDDEN: never `npx clerk login`)
 
 #### 3. The Idea Interview (For Non-SWEs & Creators)
 Ask the user in plain English what they would like to build:
@@ -752,7 +756,24 @@ pnpm convex dev --once
 ```
 This generates the deployment URL and updates `.env.local` with `CONVEX_DEPLOYMENT` and `PUBLIC_CONVEX_URL`.
 
-#### 2. Click-by-Click Guide for Clerk Setup (For Non-SWEs)
+#### 2. Clerk Setup: CLI Automation or Click-by-Click Guide
+
+You can configure Clerk either seamlessly via the terminal using the Clerk CLI, or via click-by-click instructions in the Clerk Dashboard.
+
+##### Option A: Fast Terminal Setup with Clerk CLI (`pnpm dlx clerk`)
+If the user prefers terminal-based authentication without leaving the console:
+```bash
+# 1. Authenticate with Clerk (or use accountless dev mode via pnpm dlx clerk init)
+pnpm dlx clerk auth login
+
+# 2. Inspect available applications
+pnpm dlx clerk apps list --json
+
+# 3. Verify Clerk integration health
+pnpm dlx clerk doctor
+```
+
+##### Option B: Click-by-Click Guide in Clerk Dashboard (For Non-SWEs)
 Guide the user with clear, friendly steps to obtain their keys:
 
 > 1. Open [https://dashboard.clerk.com](https://dashboard.clerk.com) in your browser.
