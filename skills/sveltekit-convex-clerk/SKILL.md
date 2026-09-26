@@ -12,12 +12,31 @@ This skill provides an automated, end-to-end recipe for scaffolding, wiring, and
 | Layer | Technology | Key Capabilities / Rules |
 | :--- | :--- | :--- |
 | **Framework & UI** | [SvelteKit](https://svelte.dev) + TypeScript | Modern Svelte 5 runes (`$state`, `$derived`, `$effect`, `Snippet`, `{@render}`), minimal template. |
+| **Styling** | Standard Scoped CSS + CSS Variables (`src/app.css`) | **STRICTLY NO TAILWIND**. Clean, zero-dependency design system, dark mode, mobile-ready. |
 | **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Fast, space-efficient, deterministic. **NEVER** invoke `npm`, `yarn`, or `bun`. |
 | **Code Quality** | [Biome](https://biomejs.dev) (`@biomejs/biome`) | Unified Rust-powered linter and formatter. **STRICTLY NO** ESLint or Prettier. |
 | **Testing** | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) | Unit, component, and in-memory Convex testing via Vitest; robust E2E testing via Playwright. |
 | **Database & Realtime** | [Convex](https://convex.dev) (`convex`, `convex-svelte`) | Real-time reactive queries over WebSocket, TypeScript schema, server functions. |
 | **Authentication** | [Clerk](https://clerk.com) (`svelte-clerk`) | Secure auth, JWT session templates, reactive runes, prebuilt UI controls. |
 | **VCS & Hosting** | [GitHub CLI](https://cli.github.com) + [Vercel](https://vercel.com) | Automated repository creation (`gh repo create`) and headless zero-config deployments (`vercel --prod`). |
+
+---
+
+## Non-SWE Friendly Principles & Agent Communication
+
+When executing this skill for non-software engineers, solo creators, or beginners, you MUST adhere to these conversational rules:
+
+1. **Zero Jargon & No Raw Stack Traces**:
+   - **Never** paste raw compiler errors, TypeScript codes (e.g. `TS2322`), or stack traces into the chat.
+   - Fix issues silently and autonomously. If user input is needed, speak in plain, reassuring English (*"I noticed a small layout alignment issue while testing your page, and I'm updating it now."*).
+2. **Interactive Idea-to-App Modeling**:
+   - Do **NOT** assume the user only wants a generic todo list.
+   - Ask them in plain English what their app is about, and automatically customize the Convex schema, mutations, queries, and Svelte UI for their specific idea (recipes, book logs, trip planners, habits, etc.).
+3. **Click-by-Click Guidance for Keys**:
+   - Guide the user step-by-step with direct clickable links when setting up Clerk and Convex. Never use terms like "JWT issuer domain" without explaining where to click.
+4. **Milestone Celebrations & Clickable Links**:
+   - Always present a clickable local preview link: `http://localhost:5173`.
+   - Always present the live mobile-friendly Vercel production link: `https://<app>.vercel.app` with instructions on how to test logging in on their phone.
 
 ---
 
@@ -37,21 +56,22 @@ Prior to execution or when verifying updates, agents can inspect the latest spec
 
 ```mermaid
 flowchart TD
-    S1["1. System Prerequisites Check"] --> S2["2. Scaffolding Automation (sv + pnpm)"]
+    S1["1. Idea Interview & System Checks"] --> S2["2. Scaffolding Automation (sv + pnpm)"]
     S2 --> S3["3. Testing Setup (Vitest + Playwright)"]
     S3 --> S4["4. Code Quality Setup (Biome)"]
-    S4 --> S5["5. Backend & Schema Wiring (Convex)"]
-    S5 --> S6["6. Frontend & Auth Wiring (Clerk + Svelte 5)"]
-    S6 --> S7["7. Local Verification (convex dev + vitest)"]
+    S4 --> S5["5. Backend & Custom Schema (Convex)"]
+    S5 --> S6["6. Scoped CSS & Auth Wiring (Clerk + Svelte 5)"]
+    S6 --> S7["7. Local Verification & Tests (http://localhost:5173)"]
     S7 --> S8["8. Remote GitHub Repo Creation & Licensing"]
-    S8 --> S9["9. Production Deployment & Env Sync (Vercel)"]
+    S8 --> S9["9. Production Deployment & Live Phone Link (Vercel)"]
 ```
 
 ---
 
-### Step 1: System Prerequisites Check
+### Step 1: System Prerequisites & Idea Discovery
 
-Before modifying or creating any files, verify that the required developer CLI tools are authenticated and available locally:
+#### 1. Verify Developer CLI States
+Before creating any files, verify that local developer CLI tools are authenticated and available:
 
 ```bash
 # 1. Verify GitHub CLI authentication
@@ -68,11 +88,22 @@ npx convex whoami
 ```
 
 > [!IMPORTANT]
-> If any CLI reports unauthenticated status:
+> If any tool reports unauthenticated status, assist the user calmly:
 > - For GitHub: Run `gh auth login`
 > - For Vercel: Run `npx vercel login`
 > - For Convex: Run `npx convex login`
-> Do not proceed until all required tools are authenticated.
+
+#### 2. The Idea Interview (For Non-SWEs & Creators)
+Ask the user in plain English what they would like to build:
+> *"What kind of app would you like to build today, and what kinds of things do you want people to save, view, or track?"*
+
+Common examples to inspire them:
+- **Recipe Box**: Save family recipes, ingredients, and cooking times.
+- **Reading Journal**: Track books, ratings, favorites, and notes.
+- **Habit or Workout Tracker**: Daily logs, checklists, and streaks.
+- **Trip Planner**: Itineraries, packing lists, and locations.
+
+**Agent Action**: Take their plain-English description and design the Convex schema, mutations, queries, and Svelte UI for *their specific idea* rather than just a generic todo list!
 
 ---
 
@@ -358,12 +389,152 @@ export const load: LayoutServerLoad = ({ locals }) => {
 };
 ```
 
-#### 4. Root Layout with Realtime Auth Synchronization: `src/routes/+layout.svelte`
+#### 4. Zero-Dependency CSS Design System: `src/app.css`
 
-Initialize Convex and pass Clerk session tokens to Convex reactively inside Svelte 5 `$effect`:
+Create `src/app.css` providing a clean, modern design system using native CSS variables without Tailwind or external dependencies:
+
+```css
+/* Zero-dependency, modern CSS design system for SvelteKit */
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #ffffff;
+
+  --color-success: #16a34a;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+
+  --transition-fast: 0.15s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0b0f19;
+    --color-surface: #151d2f;
+    --color-border: #1e293b;
+
+    --color-text: #f8fafc;
+    --color-text-muted: #94a3b8;
+
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-primary-light: #1e293b;
+
+    --color-error-bg: #450a0a;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.95rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+```
+
+#### 5. Root Layout: `src/routes/+layout.svelte`
+
+Initialize Convex, import `../app.css`, and pass Clerk session tokens to Convex reactively:
 
 ```svelte
 <script lang="ts">
+  import '../app.css';
   import type { Snippet } from 'svelte';
   import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from 'svelte-clerk';
   import { useClerkContext } from 'svelte-clerk/client';
@@ -372,10 +543,7 @@ Initialize Convex and pass Clerk session tokens to Convex reactively inside Svel
 
   const { children }: { children: Snippet } = $props();
 
-  // 1. Initialize Convex client
   const client = setupConvex(PUBLIC_CONVEX_URL);
-
-  // 2. Synchronize Clerk session token with Convex
   const ctx = useClerkContext();
 
   $effect(() => {
@@ -391,80 +559,86 @@ Initialize Convex and pass Clerk session tokens to Convex reactively inside Svel
 </script>
 
 <ClerkProvider>
-  <div class="app-layout">
-    <header class="app-header">
-      <div class="brand">
-        <span class="logo">⚡</span>
-        <strong>SvelteKit + Convex</strong>
+  <div class="app-shell">
+    <header class="navbar">
+      <div class="nav-content">
+        <a href="/" class="brand-link">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-title">My App</span>
+        </a>
+        <nav class="auth-controls">
+          <SignedOut>
+            <SignInButton mode="modal" class="btn btn-primary">Sign In</SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+        </nav>
       </div>
-      <nav class="auth-nav">
-        <SignedOut>
-          <SignInButton mode="modal" class="btn-signin">Sign In</SignInButton>
-        </SignedOut>
-        <SignedIn>
-          <UserButton afterSignOutUrl="/" />
-        </SignedIn>
-      </nav>
     </header>
 
-    <main class="app-main">
+    <main class="container">
       {@render children?.()}
     </main>
+
+    <footer class="app-footer">
+      <p>Built with SvelteKit & Convex</p>
+    </footer>
   </div>
 </ClerkProvider>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    color: #1f2937;
-    background-color: #f9fafb;
-  }
-  .app-layout {
+  .app-shell {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
-  .app-header {
+  .navbar {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .nav-content {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0.875rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
   }
-  .brand {
+  .brand-link {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 700;
     font-size: 1.125rem;
   }
-  .auth-nav {
+  .brand-icon {
+    font-size: 1.25rem;
+  }
+  .auth-controls {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
   }
-  :global(.btn-signin) {
-    background-color: #2563eb;
-    color: #ffffff;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .app-main {
-    flex: 1;
-    max-width: 900px;
-    width: 100%;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    box-sizing: border-box;
+  .app-footer {
+    margin-top: auto;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    border-top: 1px solid var(--color-border);
   }
 </style>
 ```
 
-#### 5. Sample Protected Reactive View: `src/routes/+page.svelte`
+#### 6. Custom Reactive View: `src/routes/+page.svelte`
+
+Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) using scoped Svelte styles:
 
 ```svelte
 <script lang="ts">
@@ -495,46 +669,60 @@ Initialize Convex and pass Clerk session tokens to Convex reactively inside Svel
 </script>
 
 <SignedOut>
-  <div class="hero-card">
-    <h1>Welcome to Full-Stack SvelteKit</h1>
-    <p>Sign in above to test authenticated real-time database queries powered by Convex and Clerk.</p>
-    <SignInButton mode="modal" class="btn-signin">Get Started</SignInButton>
+  <div class="card hero-card">
+    <h1>Welcome to Your App</h1>
+    <p>Sign in to start creating and saving your items in real time.</p>
+    <SignInButton mode="modal" class="btn btn-primary">Sign In to Get Started</SignInButton>
   </div>
 </SignedOut>
 
 <SignedIn>
-  <section class="dashboard">
-    <h2>Your Real-Time Tasks</h2>
-    <form onsubmit={handleSubmit} class="task-form">
+  <section class="card">
+    <div class="card-header">
+      <h2>Your Saved Items</h2>
+      <span class="badge">Live Sync</span>
+    </div>
+    <p class="card-subtitle">Anything you add updates instantly across your phone and computer.</p>
+
+    <form onsubmit={handleSubmit} class="add-form">
       <input
         type="text"
         bind:value={newTaskText}
-        placeholder="What needs doing?"
+        placeholder="Add a new item..."
         disabled={isSubmitting}
-        class="task-input"
+        class="input"
       />
-      <button type="submit" disabled={isSubmitting || !newTaskText.trim()} class="btn-submit">
-        {isSubmitting ? 'Adding...' : 'Add Task'}
+      <button type="submit" disabled={isSubmitting || !newTaskText.trim()} class="btn btn-primary">
+        {isSubmitting ? 'Adding...' : 'Add'}
       </button>
     </form>
 
     {#if $tasks.isLoading}
-      <p>Loading tasks from Convex...</p>
+      <div class="state-message">
+        <p>Loading your items...</p>
+      </div>
     {:else if $tasks.error}
-      <p class="error">Error: {$tasks.error.toString()}</p>
+      <div class="state-message error">
+        <p>Could not load items: {$tasks.error.toString()}</p>
+      </div>
     {:else if $tasks.data?.length === 0}
-      <p>No tasks yet. Create one above!</p>
+      <div class="state-message">
+        <p>No items yet. Type something above and click Add!</p>
+      </div>
     {:else}
-      <ul class="task-list">
+      <ul class="item-list">
         {#each $tasks.data ?? [] as task (task._id)}
-          <li class="task-item">
-            <label>
+          <li class="item-row">
+            <label class="item-label">
               <input
                 type="checkbox"
                 checked={task.isCompleted}
                 onchange={() => toggleTask({ id: task._id })}
+                class="checkbox"
               />
-              <span class:completed={task.isCompleted}>{task.text}</span>
+              <span class="item-title" class:completed={task.isCompleted}>
+                {task.text}
+              </span>
             </label>
           </li>
         {/each}
@@ -544,69 +732,116 @@ Initialize Convex and pass Clerk session tokens to Convex reactively inside Svel
 </SignedIn>
 
 <style>
-  .hero-card, .dashboard {
-    background: #ffffff;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  .hero-card {
+    text-align: center;
+    padding: 3rem 1.5rem;
   }
-  .task-form {
+  .hero-card h1 {
+    margin-top: 0;
+    font-size: 2rem;
+  }
+  .hero-card p {
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+  .card-header h2 {
+    margin: 0;
+  }
+  .card-subtitle {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+  .add-form {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
   }
-  .task-input {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-  }
-  .btn-submit {
-    padding: 0.5rem 1rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 0.375rem;
-    cursor: pointer;
-  }
-  .task-list {
+  .item-list {
     list-style: none;
     padding: 0;
+    margin: 0;
   }
-  .task-item {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f3f4f6;
+  .item-row {
+    padding: 0.875rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .item-row:last-child {
+    border-bottom: none;
+  }
+  .item-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+  }
+  .checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: var(--color-primary);
+  }
+  .item-title {
+    font-size: 1rem;
+    color: var(--color-text);
   }
   .completed {
     text-decoration: line-through;
-    color: #9ca3af;
+    color: var(--color-text-muted);
+  }
+  .state-message {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+  }
+  .state-message.error {
+    color: var(--color-error);
+    background: var(--color-error-bg);
   }
 </style>
 ```
 
 ---
 
-### Step 6: Environment & Headless Backend Provisioning
+### Step 6: Backend Provisioning & Click-by-Click Auth Setup
 
-1. **Provision Convex Dev Backend Headlessly**:
-   ```bash
-   npx convex dev --once
-   ```
-   This generates the deployment URL and updates `.env.local` with `CONVEX_DEPLOYMENT` and `PUBLIC_CONVEX_URL`.
+#### 1. Provision Convex Dev Backend Headlessly
+Run headless Convex provisioning:
+```bash
+npx convex dev --once
+```
+This generates the deployment URL and updates `.env.local` with `CONVEX_DEPLOYMENT` and `PUBLIC_CONVEX_URL`.
 
-2. **Configure Clerk JWT Template on Convex**:
-   In the Clerk Dashboard, navigate to **JWT Templates**, choose **New Template** -> **Convex**, and copy your **Frontend API URL** (format: `https://verb-noun-00.clerk.accounts.dev`).
-   Then set it on your Convex deployment:
-   ```bash
-   npx convex env set CLERK_FRONTEND_API_URL https://<your-fapi-url>.clerk.accounts.dev
-   ```
+#### 2. Click-by-Click Guide for Clerk Setup (For Non-SWEs)
+Guide the user with clear, friendly steps to obtain their keys:
 
-3. **Verify Code Quality & Unit Tests**:
-   ```bash
-   pnpm run lint
-   pnpm run format
-   pnpm run test:unit
-   ```
+> 1. Open [https://dashboard.clerk.com](https://dashboard.clerk.com) in your browser.
+> 2. Click **Add application** (or **Create application**), enter your app's name, and pick how users can sign in (e.g. Google, Email).
+> 3. Click **Create Application**.
+> 4. In the **API Keys** section, copy the **Publishable Key** (starts with `pk_test_...`) and the **Secret Key** (starts with `sk_test_...`).
+> 5. On the left sidebar in Clerk, click **JWT Templates** $\to$ **New Template** $\to$ click **Convex**.
+> 6. Copy the **Frontend API URL** (it looks like `https://verb-noun-00.clerk.accounts.dev`).
+
+Once the user provides the Frontend API URL, configure it on Convex:
+```bash
+npx convex env set CLERK_FRONTEND_API_URL <user-fapi-url>
+```
+
+#### 3. Verify Code Quality & Unit Tests
+```bash
+pnpm run lint
+pnpm run format
+pnpm run test:unit
+```
 
 ---
 
@@ -713,9 +948,30 @@ gh repo view
 
 ---
 
+### Step 9: Celebration & Shareable Links Handoff
+
+Present the completed application to the user with enthusiasm, clear instructions, and shareable links:
+
+1. **Local Preview Link**:
+   > *"💻 **Local Preview:** You can test your app right now on your computer at: `http://localhost:5173` (run `pnpm run dev`)."*
+
+2. **Live Mobile & Web Share Link**:
+   > *"🎉 **Your App is Live on the Internet!**"*
+   > *"Here is your shareable link: `https://<your-project>.vercel.app`"*
+   > *"Open it in your phone browser, test creating an account, and text it to family and friends!"*
+
+3. **Suggested Next Steps**:
+   Suggest 2–3 fun improvements they can ask you to build next:
+   - *"Would you like to add search and filtering for your items?"*
+   - *"Would you like to add photo or image uploads?"*
+   - *"Would you like to customize the colors and fonts to your favorite style?"*
+
+---
+
 ## Completion Verification Checklist
 
 - [ ] `pnpm --version` confirmed `pnpm` is strictly used (no `npm` or `yarn` lockfiles created).
+- [ ] Strictly zero Tailwind CSS or PostCSS dependencies installed; clean scoped CSS and `src/app.css` used.
 - [ ] No `eslint` or `prettier` packages or configuration files exist in the project root.
 - [ ] `biome.json` is configured and `pnpm run check` passes without warnings or formatting errors.
 - [ ] Vitest unit tests and Playwright E2E tests are configured and pass (`pnpm run test`).
@@ -723,4 +979,5 @@ gh repo view
 - [ ] `src/routes/+layout.svelte` establishes reactive token passing from `useClerkContext()` to `setupConvex()`.
 - [ ] Remote GitHub repository created via `gh repo create` (with MIT license if public).
 - [ ] Project successfully deployed to Vercel with production environment variables verified.
+- [ ] Live shareable Vercel URL and local preview URL presented clearly to the user.
 

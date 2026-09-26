@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../app.css';
   import type { Snippet } from 'svelte';
   import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from 'svelte-clerk';
   import { useClerkContext } from 'svelte-clerk/client';
@@ -7,10 +8,10 @@
 
   const { children }: { children: Snippet } = $props();
 
-  // 1. Initialize the Convex client for Svelte 5
+  // 1. Initialize Convex client
   const client = setupConvex(PUBLIC_CONVEX_URL);
 
-  // 2. Synchronize Clerk session JWT with Convex client
+  // 2. Synchronize Clerk session token with Convex
   const ctx = useClerkContext();
 
   $effect(() => {
@@ -26,86 +27,84 @@
 </script>
 
 <ClerkProvider>
-  <div class="app-layout">
-    <header class="app-header">
-      <div class="brand">
-        <span class="logo">⚡</span>
-        <strong>SvelteKit + Convex</strong>
+  <div class="app-shell">
+    <header class="navbar">
+      <div class="nav-content">
+        <a href="/" class="brand-link">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-title">My App</span>
+        </a>
+        <nav class="auth-controls">
+          <SignedOut>
+            <SignInButton mode="modal" class="btn btn-primary">Sign In</SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+        </nav>
       </div>
-      <nav class="auth-nav">
-        <SignedOut>
-          <SignInButton mode="modal" class="btn-signin">Sign In</SignInButton>
-        </SignedOut>
-        <SignedIn>
-          <UserButton afterSignOutUrl="/" />
-        </SignedIn>
-      </nav>
     </header>
 
-    <main class="app-main">
+    <main class="container">
       {@render children?.()}
     </main>
+
+    <footer class="app-footer">
+      <p>Built with SvelteKit & Convex</p>
+    </footer>
   </div>
 </ClerkProvider>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-      sans-serif;
-    color: #1f2937;
-    background-color: #f9fafb;
-  }
-
-  .app-layout {
+  .app-shell {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
 
-  .app-header {
+  .navbar {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .nav-content {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0.875rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
   }
 
-  .brand {
+  .brand-link {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 700;
     font-size: 1.125rem;
   }
 
-  .auth-nav {
+  .brand-icon {
+    font-size: 1.25rem;
+  }
+
+  .auth-controls {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
-  :global(.btn-signin) {
-    background-color: #2563eb;
-    color: #ffffff;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    border: none;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-  }
-
-  :global(.btn-signin:hover) {
-    background-color: #1d4ed8;
-  }
-
-  .app-main {
-    flex: 1;
-    max-width: 900px;
-    width: 100%;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    box-sizing: border-box;
+  .app-footer {
+    margin-top: auto;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    border-top: 1px solid var(--color-border);
   }
 </style>

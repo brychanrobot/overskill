@@ -3,7 +3,6 @@
   import { api } from '$convex/_generated/api';
   import { SignedIn, SignedOut, SignInButton } from 'svelte-clerk';
 
-  // Reactive real-time subscription to authenticated query
   const tasks = useQuery(api.tasks.list, {});
   const createTask = useMutation(api.tasks.create);
   const toggleTask = useMutation(api.tasks.toggle);
@@ -27,58 +26,58 @@
 </script>
 
 <SignedOut>
-  <div class="hero-card">
-    <h1>Welcome to Full-Stack SvelteKit</h1>
-    <p>
-      This app demonstrates real-time reactive data with <strong>Convex</strong>, secure authentication
-      powered by <strong>Clerk</strong>, and code quality verified by <strong>Biome</strong>.
-    </p>
-    <SignInButton mode="modal" class="btn-cta">Get Started & Sign In</SignInButton>
+  <div class="card hero-card">
+    <h1>Welcome to Your App</h1>
+    <p>Sign in to start creating and saving your items in real time.</p>
+    <SignInButton mode="modal" class="btn btn-primary">Sign In to Get Started</SignInButton>
   </div>
 </SignedOut>
 
 <SignedIn>
-  <section class="dashboard">
-    <h2>Your Real-Time Tasks</h2>
-    <p class="subtitle">Data updates instantly across all connected clients.</p>
+  <section class="card">
+    <div class="card-header">
+      <h2>Your Saved Items</h2>
+      <span class="badge">Live Sync</span>
+    </div>
+    <p class="card-subtitle">Anything you add updates instantly across your phone and computer.</p>
 
-    <form onsubmit={handleSubmit} class="task-form">
+    <form onsubmit={handleSubmit} class="add-form">
       <input
         type="text"
         bind:value={newTaskText}
-        placeholder="What do you need to do?"
+        placeholder="Add a new item..."
         disabled={isSubmitting}
-        class="task-input"
+        class="input"
       />
-      <button type="submit" disabled={isSubmitting || !newTaskText.trim()} class="btn-submit">
-        {isSubmitting ? 'Adding...' : 'Add Task'}
+      <button type="submit" disabled={isSubmitting || !newTaskText.trim()} class="btn btn-primary">
+        {isSubmitting ? 'Adding...' : 'Add'}
       </button>
     </form>
 
     {#if $tasks.isLoading}
-      <div class="state-card loading">
-        <p>Loading real-time tasks from Convex...</p>
+      <div class="state-message">
+        <p>Loading your items...</p>
       </div>
     {:else if $tasks.error}
-      <div class="state-card error">
-        <p>Failed to load tasks: {$tasks.error.toString()}</p>
+      <div class="state-message error">
+        <p>Could not load items: {$tasks.error.toString()}</p>
       </div>
     {:else if $tasks.data?.length === 0}
-      <div class="state-card empty">
-        <p>No tasks found. Add your first task using the form above!</p>
+      <div class="state-message">
+        <p>No items yet. Type something above and click Add!</p>
       </div>
     {:else}
-      <ul class="task-list">
+      <ul class="item-list">
         {#each $tasks.data ?? [] as task (task._id)}
-          <li class="task-item">
-            <label class="task-label">
+          <li class="item-row">
+            <label class="item-label">
               <input
                 type="checkbox"
                 checked={task.isCompleted}
                 onchange={() => toggleTask({ id: task._id })}
-                class="task-checkbox"
+                class="checkbox"
               />
-              <span class="task-text" class:completed={task.isCompleted}>
+              <span class="item-title" class:completed={task.isCompleted}>
                 {task.text}
               </span>
             </label>
@@ -91,134 +90,93 @@
 
 <style>
   .hero-card {
-    background: #ffffff;
-    padding: 3rem 2rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     text-align: center;
-    max-width: 600px;
-    margin: 3rem auto;
+    padding: 3rem 1.5rem;
   }
 
   .hero-card h1 {
     margin-top: 0;
-    color: #111827;
+    font-size: 2rem;
   }
 
   .hero-card p {
-    color: #4b5563;
-    line-height: 1.6;
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
     margin-bottom: 2rem;
   }
 
-  :global(.btn-cta) {
-    background-color: #2563eb;
-    color: #ffffff;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    border: none;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .dashboard {
-    background: #ffffff;
-    padding: 2rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .dashboard h2 {
-    margin: 0 0 0.25rem 0;
-    color: #111827;
-  }
-
-  .subtitle {
-    margin: 0 0 1.5rem 0;
-    color: #6b7280;
-    font-size: 0.875rem;
-  }
-
-  .task-form {
+  .card-header {
     display: flex;
-    gap: 0.75rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-header h2 {
+    margin: 0;
+  }
+
+  .card-subtitle {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .add-form {
+    display: flex;
+    gap: 0.5rem;
     margin-bottom: 1.5rem;
   }
 
-  .task-input {
-    flex: 1;
-    padding: 0.625rem 0.875rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    font-size: 0.95rem;
-  }
-
-  .task-input:focus {
-    outline: 2px solid #2563eb;
-    outline-offset: -1px;
-    border-color: transparent;
-  }
-
-  .btn-submit {
-    padding: 0.625rem 1.25rem;
-    background: #2563eb;
-    color: #ffffff;
-    border: none;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .btn-submit:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .state-card {
-    padding: 1.5rem;
-    text-align: center;
-    border-radius: 0.375rem;
-    background: #f3f4f6;
-    color: #4b5563;
-  }
-
-  .state-card.error {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-
-  .task-list {
+  .item-list {
     list-style: none;
     padding: 0;
     margin: 0;
   }
 
-  .task-item {
+  .item-row {
     padding: 0.875rem 0.5rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .task-label {
+  .item-row:last-child {
+    border-bottom: none;
+  }
+
+  .item-label {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     cursor: pointer;
   }
 
-  .task-checkbox {
+  .checkbox {
     width: 1.25rem;
     height: 1.25rem;
-    accent-color: #2563eb;
+    accent-color: var(--color-primary);
   }
 
-  .task-text {
+  .item-title {
     font-size: 1rem;
-    color: #1f2937;
+    color: var(--color-text);
   }
 
-  .task-text.completed {
+  .completed {
     text-decoration: line-through;
-    color: #9ca3af;
+    color: var(--color-text-muted);
+  }
+
+  .state-message {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+  }
+
+  .state-message.error {
+    color: var(--color-error);
+    background: var(--color-error-bg);
   }
 </style>
