@@ -17,9 +17,28 @@ Every skill in this repository is built following the official Antigravity Custo
 
 ## Using Skills with Antigravity (`agy`)
 
-### Option 1: Point AGY directly at a GitHub Raw URL (Recommended for Quick Tasks)
+### Option 1: Install as an Antigravity Plugin (Recommended)
 
-You can prompt your Antigravity agent directly with the skill's raw URL:
+Install all skills globally across all your projects in a single command using the official `agy` CLI:
+
+```bash
+agy plugin install https://github.com/brychanrobot/overskill
+```
+
+*(Or inside the interactive `agy` TUI, run: `/plugin install https://github.com/brychanrobot/overskill`)*
+
+#### Updating `overskill`
+To fetch the latest skills and template updates at any time, re-run:
+
+```bash
+agy plugin install https://github.com/brychanrobot/overskill
+```
+
+---
+
+### Option 2: Point AGY directly at a GitHub Raw URL (For One-Off Tasks)
+
+You can prompt your Antigravity agent directly with any skill's raw URL:
 
 ```text
 Fetch and execute the full-stack setup skill from:
@@ -30,7 +49,7 @@ Because each skill's `SKILL.md` is strictly self-contained, the agent will inges
 
 ---
 
-### Option 2: Inherit into a Project via `.agents/skills.json`
+### Option 3: Inherit into a Project via `.agents/skills.json`
 
 To make skills from this repository permanently available to any of your local projects, add this repository to your project's `.agents/skills.json`:
 

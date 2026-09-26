@@ -1,0 +1,21 @@
+{
+  "name": "overskill",
+  "version": "0.1.0",
+  "description": "Curated, production-grade agent skills and workflows for Antigravity (AGY), crafted for non-SWE creators and full-stack builders.",
+  "author": {
+    "name": "brychanrobot"
+  },
+  "repository": "https://github.com/brychanrobot/overskill",
+  "license": "MIT",
+  "keywords": [
+    "sveltekit",
+    "convex",
+    "clerk",
+    "tailwind",
+    "shadcn",
+    "playwright",
+    "jujutsu",
+    "jj",
+    "non-swe"
+  ]
+}
