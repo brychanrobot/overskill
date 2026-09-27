@@ -38,3 +38,6 @@ Always adhere strictly to the **bottom-up incremental squash workflow**:
    - Run `jj new <next-commit-id>`.
    - Resolve, verify all tests pass, and squash.
    - Repeat until every commit in the stack is clean and green (`○`).
+
+> [!TIP]
+> Ensure pagination is disabled (`jj config set --user ui.paginate "never"`) so that intermediate diff and log checks stream immediately without hanging for pager input.

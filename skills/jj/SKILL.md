@@ -14,6 +14,11 @@ This skill establishes the comprehensive operating standard for managing reposit
 1. **NO GIT**: Never invoke `git` directly unless an operation is demonstrably impossible in both the `jj` MCP tools and shell `jj`.
 2. **PRIORITIZE MCP TOOLS**: Always use the lazy-loaded `jj` MCP tools (`jj_status`, `jj_log`, `jj_diff`, `jj_show`, `jj_describe`, `jj_squash`, `jj_resolve`, `jj_file_show`, `jj_help`).
 3. **SHELL JJ RESTRICTION**: Only invoke `jj` from the shell (`run_command`) for operations not covered by existing MCP tools (e.g. `jj new <commit-id>`, `jj bookmark ...`, `jj git push ...`).
+4. **DISABLE PAGER IN AGENT ENVIRONMENTS**: Background commands running `jj status`, `jj log`, or `jj diff` hang unexpectedly if `less -FRXK` waits for terminal input (`WARNING: terminal is not fully functional`). Always ensure pagination is disabled:
+   ```bash
+   jj config set --user ui.paginate "never"
+   ```
+   This guarantees all version control commands stream output immediately and exit cleanly in non-interactive subshells.
 
 ### Available MCP Tools Reference
 

@@ -6,5 +6,7 @@ export default defineSchema({
     text: v.string(),
     isCompleted: v.boolean(),
     userId: v.string(),
-  }).index('by_user', ['userId']),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_completed', ['userId', 'isCompleted']),
 });

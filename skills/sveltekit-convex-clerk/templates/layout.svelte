@@ -11,17 +11,19 @@
   // 1. Initialize Convex client
   const client = setupConvex(PUBLIC_CONVEX_URL);
 
-  // 2. Synchronize Clerk session token with Convex
+  // 2. Synchronize Clerk session token reactively with Convex
   const ctx = useClerkContext();
 
   $effect(() => {
-    client.setAuth(async () => {
+    client.setAuth(async (forceRefreshToken?: boolean) => {
       try {
-        if (!ctx.session) return null;
-        return (await ctx.session.getToken({ template: 'convex' })) ?? null;
+        if (!ctx.isLoaded || !ctx.session) return null;
+        return (await ctx.session.getToken({ template: 'convex', skipCache: forceRefreshToken })) ?? null;
       } catch {
         return null;
       }
+    }, {
+      isLoading: () => !ctx.isLoaded,
     });
   });
 </script>

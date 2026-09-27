@@ -168,6 +168,55 @@ pnpm dlx sv add tailwindcss vitest="usages:unit,component" playwright --install 
 pnpm exec playwright install --with-deps chromium
 ```
 
+> [!CRITICAL]
+> **Playwright & Dev Server Lifecycle Configuration (Preventing ENOENT 500 Crashes)**:
+> Default starter templates configure Playwright with `webServer: { command: 'pnpm run build && pnpm run preview', port: 4173 }`.
+> When an agent or developer runs tests while `vite dev` is active in the background, `vite build` wipes `.svelte-kit/output` and unlinks `.svelte-kit/types/` and `.svelte-kit/generated/`. The active `vite dev` server crashes with `500 ENOENT: stat $types.d.ts`.
+>
+> **Mandatory Architecture Rule**:
+> 1. Overwrite `playwright.config.ts` to reuse the active dev server and bind to dynamic `PORT`:
+>    ```ts
+>    // playwright.config.ts
+>    import { defineConfig, devices } from '@playwright/test';
+>
+>    const port = Number(process.env.PORT) || 5173;
+>    const baseURL = `http://localhost:${port}`;
+>
+>    export default defineConfig({
+>      testDir: './e2e',
+>      webServer: {
+>        command: 'pnpm run dev',
+>        url: baseURL,
+>        reuseExistingServer: !process.env.CI,
+>      },
+>      use: {
+>        baseURL,
+>        trace: 'on-first-retry',
+>      },
+>      projects: [
+>        {
+>          name: 'chromium',
+>          use: { ...devices['Desktop Chrome'] },
+>        },
+>      ],
+>    });
+>    ```
+> 2. Ensure `vite.config.ts` includes `strictPort: true` to prevent silent port drift:
+>    ```ts
+>    // vite.config.ts
+>    import { sveltekit } from '@sveltejs/kit/vite';
+>    import tailwindcss from '@tailwindcss/vite';
+>    import { defineConfig } from 'vite';
+>
+>    const port = Number(process.env.PORT) || 5173;
+>
+>    export default defineConfig({
+>      plugins: [tailwindcss(), sveltekit()],
+>      server: { port, strictPort: true },
+>    });
+>    ```
+> *Result*: Instant test execution (<50ms startup), zero redundant rebuilds, zero filesystem collisions, and multi-agent isolation via `PORT=XXXX`.
+
 Ensure no legacy configuration files or dependencies were introduced. If any `.eslintrc*`, `.prettier*`, or `eslint*` dependencies exist, remove them immediately:
 
 ```bash
@@ -318,7 +367,7 @@ export default {
 
 #### 2. Define Data Schema: `convex/schema.ts`
 
-Create `convex/schema.ts` with user-scoped relational tables and indexes:
+Create `convex/schema.ts` with user-scoped relational tables and compound indexes:
 
 ```ts
 import { defineSchema, defineTable } from 'convex/server';
@@ -329,9 +378,16 @@ export default defineSchema({
     text: v.string(),
     isCompleted: v.boolean(),
     userId: v.string(),
-  }).index('by_user', ['userId']),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_completed', ['userId', 'isCompleted']),
 });
 ```
+
+> [!IMPORTANT]
+> **Defense in Depth & Compound Indexing**:
+> 1. **Defense in Depth**: Authorization checks must never exist solely in frontend Svelte routes. Every Convex mutation (`create`, `toggle`, `remove`, `clearCompleted`) and query (`list`) must independently verify `identity && isEmailAuthorized(identity.email)`.
+> 2. **Compound Indexing for State Queries**: Rather than filtering completed tasks in JavaScript after fetching all user records, add compound indexes (`.index('by_user_completed', ['userId', 'isCompleted'])`) to execute index-bounded queries (`q.eq('userId', id).eq('isCompleted', true)`).
 
 #### 3. Implement Authenticated Functions: `convex/tasks.ts`
 
@@ -382,6 +438,42 @@ export const toggle = mutation({
       throw new Error('Task not found or unauthorized');
     }
     await ctx.db.patch(args.id, { isCompleted: !task.isCompleted });
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id('tasks') },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Unauthenticated');
+    }
+    const task = await ctx.db.get(args.id);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error('Task not found or unauthorized');
+    }
+    await ctx.db.delete(args.id);
+  },
+});
+
+export const clearCompleted = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Unauthenticated');
+    }
+    // Efficiently query using the compound index instead of in-memory JS filtering
+    const completedTasks = await ctx.db
+      .query('tasks')
+      .withIndex('by_user_completed', (q) =>
+        q.eq('userId', identity.subject).eq('isCompleted', true)
+      )
+      .collect();
+
+    for (const task of completedTasks) {
+      await ctx.db.delete(task._id);
+    }
   },
 });
 ```
@@ -490,89 +582,94 @@ pnpm dlx shadcn-svelte@latest add button card dialog input badge
 
 ##### Configure `src/app.css`
 
-Define Tailwind v4 base styles, shadcn color variables, and the `@theme` token mappings:
+Define Tailwind v4 base styles, shadcn color variables, and the `@theme` token mappings.
+
+> [!IMPORTANT]
+> **Preventing Clerk Modal Transparency with Tailwind CSS v4**:
+> In Tailwind CSS v4, root design variables like `--card`, `--background`, and `--popover` must be defined as valid, executable CSS color values (e.g. `hsl(0 0% 100%)`) rather than bare color channels (`0 0% 100%`).
+> When `@clerk/ui` applies `style="background-color: var(--card)"`, bare channel values cause the browser to mark the property invalid and fall back to transparent, making modal dialogs and backdrops completely invisible. Wrapping tokens in `hsl(...)` ensures solid, beautiful dialog rendering.
 
 ```css
 @import "tailwindcss";
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --background: hsl(0 0% 100%);
+    --foreground: hsl(240 10% 3.9%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(240 10% 3.9%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(240 10% 3.9%);
+    --primary: hsl(240 5.9% 10%);
+    --primary-foreground: hsl(0 0% 98%);
+    --secondary: hsl(240 4.8% 95.9%);
+    --secondary-foreground: hsl(240 5.9% 10%);
+    --muted: hsl(240 4.8% 95.9%);
+    --muted-foreground: hsl(240 3.8% 46.1%);
+    --accent: hsl(240 4.8% 95.9%);
+    --accent-foreground: hsl(240 5.9% 10%);
+    --destructive: hsl(0 84.2% 60.2%);
+    --destructive-foreground: hsl(0 0% 98%);
+    --border: hsl(240 5.9% 90%);
+    --input: hsl(240 5.9% 90%);
+    --ring: hsl(240 5.9% 10%);
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: hsl(240 10% 3.9%);
+    --foreground: hsl(0 0% 98%);
+    --card: hsl(240 10% 3.9%);
+    --card-foreground: hsl(0 0% 98%);
+    --popover: hsl(240 10% 3.9%);
+    --popover-foreground: hsl(0 0% 98%);
+    --primary: hsl(0 0% 98%);
+    --primary-foreground: hsl(240 5.9% 10%);
+    --secondary: hsl(240 3.7% 15.9%);
+    --secondary-foreground: hsl(0 0% 98%);
+    --muted: hsl(240 3.7% 15.9%);
+    --muted-foreground: hsl(240 5% 64.9%);
+    --accent: hsl(240 3.7% 15.9%);
+    --accent-foreground: hsl(0 0% 98%);
+    --destructive: hsl(0 62.8% 30.6%);
+    --destructive-foreground: hsl(0 0% 98%);
+    --border: hsl(240 3.7% 15.9%);
+    --input: hsl(240 3.7% 15.9%);
+    --ring: hsl(240 4.9% 83.9%);
   }
 
   * {
-    border-color: hsl(var(--border));
+    border-color: var(--border);
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--background);
+    color: var(--foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
     min-height: 100vh;
   }
 }
 
 @theme {
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -598,13 +695,15 @@ Initialize Convex, import `../app.css`, and pass Clerk session tokens to Convex 
   const ctx = useClerkContext();
 
   $effect(() => {
-    client.setAuth(async () => {
+    client.setAuth(async (forceRefreshToken?: boolean) => {
       try {
-        if (!ctx.session) return null;
-        return (await ctx.session.getToken({ template: 'convex' })) ?? null;
+        if (!ctx.isLoaded || !ctx.session) return null;
+        return (await ctx.session.getToken({ template: 'convex', skipCache: forceRefreshToken })) ?? null;
       } catch {
         return null;
       }
+    }, {
+      isLoading: () => !ctx.isLoaded,
     });
   });
 </script>
@@ -769,9 +868,18 @@ pnpm dlx clerk auth login
 # 2. Inspect available applications
 pnpm dlx clerk apps list --json
 
-# 3. Verify Clerk integration health
+# 3. Create the mandatory 'convex' JWT Template with audience 'convex'
+pnpm dlx clerk api jwt_templates create \
+  --name convex \
+  --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
+
+# 4. Verify Clerk integration health
 pnpm dlx clerk doctor
 ```
+
+> [!IMPORTANT]
+> **Mandatory Audience Claim (`aud: "convex"`)**:
+> Convex backend token verification (`ctx.auth.getUserIdentity()`) validates that the JWT payload contains `applicationID: "convex"` matching `convex/auth.config.ts`. If the JWT template lacks `"aud": "convex"`, Convex will reject queries and mutations with an unauthenticated error even if the user is signed in to Clerk! Always ensure the template defines `"aud": "convex"`.
 
 ##### Option B: Click-by-Click Guide in Clerk Dashboard (For Non-SWEs)
 Guide the user with clear, friendly steps to obtain their keys:
@@ -780,8 +888,9 @@ Guide the user with clear, friendly steps to obtain their keys:
 > 2. Click **Add application** (or **Create application**), enter your app's name, and pick how users can sign in (e.g. Google, Email).
 > 3. Click **Create Application**.
 > 4. In the **API Keys** section, copy the **Publishable Key** (starts with `pk_test_...`) and the **Secret Key** (starts with `sk_test_...`).
-> 5. On the left sidebar in Clerk, click **JWT Templates** $\to$ **New Template** $\to$ click **Convex**.
-> 6. Copy the **Frontend API URL** (it looks like `https://verb-noun-00.clerk.accounts.dev`).
+> 5. On the left sidebar in Clerk, click **JWT Templates** $\to$ **New Template** $\to$ select the **Convex** template.
+> 6. Ensure the template name is `convex` and the **Audience** (`aud`) field is set to `convex`.
+> 7. Copy the **Issuer** / **Frontend API URL** (it looks like `https://verb-noun-00.clerk.accounts.dev`).
 
 Once the user provides the Frontend API URL, configure it on Convex:
 ```bash

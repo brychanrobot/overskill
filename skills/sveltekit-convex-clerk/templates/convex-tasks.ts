@@ -44,3 +44,39 @@ export const toggle = mutation({
     await ctx.db.patch(args.id, { isCompleted: !task.isCompleted });
   },
 });
+
+export const remove = mutation({
+  args: { id: v.id('tasks') },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Unauthenticated');
+    }
+    const task = await ctx.db.get(args.id);
+    if (!task || task.userId !== identity.subject) {
+      throw new Error('Task not found or unauthorized');
+    }
+    await ctx.db.delete(args.id);
+  },
+});
+
+export const clearCompleted = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Unauthenticated');
+    }
+    // Efficiently query using the compound index instead of in-memory JS filtering
+    const completedTasks = await ctx.db
+      .query('tasks')
+      .withIndex('by_user_completed', (q) =>
+        q.eq('userId', identity.subject).eq('isCompleted', true)
+      )
+      .collect();
+
+    for (const task of completedTasks) {
+      await ctx.db.delete(task._id);
+    }
+  },
+});

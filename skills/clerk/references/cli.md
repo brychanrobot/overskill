@@ -21,8 +21,17 @@ In all `overskill` environments, the Clerk CLI must be executed via `pnpm dlx cl
 | `pnpm dlx clerk enable orgs` | Enables multi-tenancy and organization management. |
 | `pnpm dlx clerk webhooks listen` | Relays live webhook deliveries to local development handlers. |
 | `pnpm dlx clerk mcp install` | Configures Clerk Model Context Protocol (MCP) for AI coding assistants. |
+| `pnpm dlx clerk api jwt_templates create` | Creates custom JWT templates for external backends (e.g. Convex, Supabase, Hasura). |
+
+### Creating a Convex JWT Template
+```bash
+pnpm dlx clerk api jwt_templates create \
+  --name convex \
+  --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
+```
 
 ---
+
 
 ## Agent Mode & Non-Interactive Execution
 

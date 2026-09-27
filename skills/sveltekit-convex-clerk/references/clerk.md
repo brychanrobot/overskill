@@ -47,9 +47,19 @@ pnpm dlx clerk doctor
 # List available Clerk apps
 pnpm dlx clerk apps list --json
 
+# Create Convex JWT template with aud: "convex"
+pnpm dlx clerk api jwt_templates create \
+  --name convex \
+  --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
+
 # Deploy to production
 pnpm dlx clerk deploy
 ```
 
+> [!IMPORTANT]
+> **Audience Claim (`aud: "convex"`)**:
+> Convex token verification explicitly checks that the JWT contains `applicationID: "convex"` matching `convex/auth.config.ts`. If the JWT template does not specify `"aud": "convex"`, Convex will treat all client requests as unauthenticated.
+
 > [!NOTE]
 > Strictly avoid `npx clerk`. In accordance with `overskill` rules, always use `pnpm dlx clerk`.
+
