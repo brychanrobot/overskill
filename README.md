@@ -35,6 +35,19 @@ To fetch the latest skills and template updates at any time, re-run:
 agy plugin install https://github.com/brychanrobot/overskill
 ```
 
+#### Keeping Plugins Automatically Updated (Smart Sync Poller)
+To ensure all installed Git-based plugins stay continuously up to date without manual intervention, use the bundled smart poller [`scripts/sync-agy-plugins.sh`](./scripts/sync-agy-plugins.sh). It scans `~/.gemini/config/plugins/`, checks upstream `git ls-remote` across all installed git plugins in ~200ms, and only triggers `agy plugin install` when upstream commits have actually changed:
+
+```bash
+# 1. Download and install the sync script to ~/.local/bin
+mkdir -p ~/.local/bin
+curl -sSL https://raw.githubusercontent.com/brychanrobot/overskill/main/scripts/sync-agy-plugins.sh \
+  -o ~/.local/bin/sync-agy-plugins.sh && chmod +x ~/.local/bin/sync-agy-plugins.sh
+
+# 2. Add to crontab (runs every 15 minutes; or set to 0 10 * * * for 10:00 AM daily)
+(crontab -l 2>/dev/null | grep -v 'sync-agy-plugins.sh'; echo "*/15 * * * * $HOME/.local/bin/sync-agy-plugins.sh") | crontab -
+```
+
 ---
 
 ### Option 2: Point AGY directly at a GitHub Raw URL (For One-Off Tasks)
@@ -100,6 +113,8 @@ mise use --global gh@latest node@lts pnpm@latest
 overskill/
 ├── README.md                      # Catalog and consumption guide
 ├── skills.json                    # AGY discovery manifest
+├── scripts/
+│   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/
     └── <skill-name>/
         ├── SKILL.md               # Primary self-contained instruction runbook for AGY
