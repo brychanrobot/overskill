@@ -47,17 +47,30 @@ When executing this skill for non-software engineers, solo creators, or beginner
 
 ---
 
-## Machine-Readable Reference Endpoints
+## Live Documentation Freshness Protocol (MANDATORY)
 
-Prior to execution or when verifying updates, agents can inspect the latest specifications:
-- **Clerk Skills**: https://github.com/clerk/skills | https://clerk.com/SKILL.md
-- **Convex LLM Index**: https://docs.convex.dev/llms.txt
-- **Convex Svelte Guide**: https://docs.convex.dev/client/svelte/overview.md
-- **Svelte LLM Index**: https://svelte.dev/llms.txt
-- **Vercel LLM Index**: https://vercel.com/docs/llms.txt
-- **Biome Standards**: https://biomejs.dev/
-- **shadcn-svelte Docs**: https://shadcn-svelte.com/docs
-- **Mise Documentation**: https://mise.jdx.dev
+To prevent code staleness and API drift across fast-moving frameworks (Svelte 5, Tailwind CSS v4, Convex, Clerk), agents **MUST** actively consult official machine-readable agent documentation endpoints (`llms.txt`, markdown documentation feeds, and official skills) rather than relying solely on training weights or static memory.
+
+### Relationship Between Templates & Live Documentation
+- **Templates in `templates/`**: Provide proven baseline scaffolding and fail-safe fixes for known environment gotchas (e.g. Playwright dev server reuse preventing `500 ENOENT: stat $types.d.ts`, Tailwind v4 `hsl(...)` color wrappers preventing Clerk modal transparency, and strict `pnpm dlx` enforcement). Use them for project initialization.
+- **Live Upstream Documentation**: The **authoritative source of truth** for all project-specific schema designs, function signatures, Svelte 5 runes, and service integrations. Before implementing novel features, complex queries, or custom auth logic, fetch the relevant live endpoint via `read_url_content` or HTTP GET.
+
+### Official Upstream Agent Endpoints
+
+| Framework / Service | Live Endpoint / Resource | Purpose & When to Fetch |
+| :--- | :--- | :--- |
+| **Svelte 5 Runes & Core** | [`https://svelte.dev/docs/svelte/llms.txt`](https://svelte.dev/docs/svelte/llms.txt) | Fetch before authoring component reactivity (`$state`, `$derived`, `$effect`, snippets). Never use deprecated Svelte 4 syntax (`export let`, `$:`, `<slot />`). |
+| **SvelteKit** | [`https://svelte.dev/docs/kit/llms.txt`](https://svelte.dev/docs/kit/llms.txt) | Fetch when writing server loaders (`+layout.server.ts`, `+page.server.ts`), form actions, server hooks, or routing logic. |
+| **Svelte CLI (`sv`)** | [`https://svelte.dev/docs/cli/llms.txt`](https://svelte.dev/docs/cli/llms.txt) | Fetch for official `sv add` and `sv create` flags and options. |
+| **Convex Database & API** | [`https://docs.convex.dev/llms.txt`](https://docs.convex.dev/llms.txt)<br>Append `.md` to any doc URL (e.g. `https://docs.convex.dev/<path>.md`) | Fetch the index, then retrieve specific topic markdown (e.g. `https://docs.convex.dev/database/reading-data/indexes.md`, `https://docs.convex.dev/client/svelte/overview.md`). |
+| **Convex Agent Skills** | [`https://github.com/get-convex/agent-skills`](https://github.com/get-convex/agent-skills) | Official Convex skills for agents (`/convex-docs`, `/convex-authz`, `/convex-design`, `/convex-test`, `/convex-reviewer`). |
+| **Clerk Single-File Runbook** | [`https://clerk.com/SKILL.md`](https://clerk.com/SKILL.md) | Canonical single-file agent guide for wiring Clerk SDKs, auth flows, and configurations. |
+| **Clerk Skills Repository** | [`https://github.com/clerk/skills`](https://github.com/clerk/skills) | Official modular Clerk skills (`clerk-setup`, `clerk-cli`, `clerk-custom-ui`, `clerk-backend-api`). |
+| **Vercel** | [`https://vercel.com/docs/llms.txt`](https://vercel.com/docs/llms.txt) | Machine-readable index for Vercel CLI, deployment configurations, and project settings. |
+| **shadcn-svelte** | [`https://shadcn-svelte.com/docs`](https://shadcn-svelte.com/docs) | Bits UI primitives, component additions via `pnpm dlx shadcn-svelte@latest add <component>`. |
+| **Biome Standards** | [`https://biomejs.dev/`](https://biomejs.dev/) | Biome linter, formatter, and configuration reference. |
+| **Mise Documentation** | [`https://mise.jdx.dev`](https://mise.jdx.dev) | Polyglot toolchain runtime manager for `~/.local/bin`. |
+
 
 ---
 
@@ -347,6 +360,16 @@ Install Convex and the reactive Svelte client:
 pnpm add convex convex-svelte svelte-clerk
 ```
 
+> [!TIP]
+> **Live Convex Documentation Lookup (Prevent Stale APIs)**:
+> When designing custom schemas, indexing, file storage, full-text search, or scheduled crons beyond the starter template, fetch the relevant Convex guide directly in markdown format by appending `.md` to the URL via `read_url_content` or HTTP GET:
+> - Indexes & compound queries: `https://docs.convex.dev/database/reading-data/indexes.md`
+> - Svelte client guide: `https://docs.convex.dev/client/svelte/overview.md`
+> - Auth & Clerk guide: `https://docs.convex.dev/auth/clerk.md`
+> - Best practices: `https://docs.convex.dev/understanding/best-practices.md`
+> - Complete index: `https://docs.convex.dev/llms.txt`
+> - Official Agent Skills: [`get-convex/agent-skills`](https://github.com/get-convex/agent-skills)
+
 #### 1. Configure Convex Auth: `convex/auth.config.ts`
 
 Create `convex/auth.config.ts` to validate Clerk JWT session tokens against your Clerk Frontend API URL:
@@ -481,6 +504,13 @@ export const clearCompleted = mutation({
 ---
 
 ### Step 5: Authentication & Frontend Wiring (Clerk + Convex + Svelte 5)
+
+> [!TIP]
+> **Live Svelte 5, SvelteKit & Clerk Documentation Lookup**:
+> Always ensure UI components use modern Svelte 5 runes rather than deprecated Svelte 4 syntax (`export let`, `$:`, `<slot />`):
+> - Svelte 5 Runes & Reactivity: [`https://svelte.dev/docs/svelte/llms.txt`](https://svelte.dev/docs/svelte/llms.txt) (`$state`, `$derived`, `$effect`, `Snippet`, `{@render children?.()}`).
+> - SvelteKit Loaders & Hooks: [`https://svelte.dev/docs/kit/llms.txt`](https://svelte.dev/docs/kit/llms.txt) (`LayoutServerLoad`, `PageServerLoad`, `hooks.server.ts`).
+> - Clerk Agent Runbook: [`https://clerk.com/SKILL.md`](https://clerk.com/SKILL.md) and [`github.com/clerk/skills`](https://github.com/clerk/skills).
 
 #### 1. Server Handler: `src/hooks.server.ts`
 
@@ -857,7 +887,7 @@ This generates the deployment URL and updates `.env.local` with `CONVEX_DEPLOYME
 
 #### 2. Clerk Setup: CLI Automation or Click-by-Click Guide
 
-You can configure Clerk either seamlessly via the terminal using the Clerk CLI, or via click-by-click instructions in the Clerk Dashboard.
+You can configure Clerk either seamlessly via the terminal using the Clerk CLI (referencing the bundled `clerk` skill or `https://clerk.com/SKILL.md`), or via click-by-click instructions in the Clerk Dashboard.
 
 ##### Option A: Fast Terminal Setup with Clerk CLI (`pnpm dlx clerk`)
 If the user prefers terminal-based authentication without leaving the console:

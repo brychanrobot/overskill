@@ -1,7 +1,11 @@
 # Clerk Authentication Reference for SvelteKit
 
-Official Resource: https://clerk.com/SKILL.md
-Svelte Community SDK: https://github.com/clerk-community/svelte-clerk
+Official Resources & Agent Documentation:
+- **Canonical Agent Runbook**: https://clerk.com/SKILL.md
+- **Official Clerk Skills**: https://github.com/clerk/skills
+- **Clerk LLM Index**: https://clerk.com/docs/llms.txt
+- **Svelte Community SDK**: https://github.com/clerk-community/svelte-clerk
+
 
 ## Core Concepts
 

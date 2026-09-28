@@ -115,3 +115,5 @@ overskill/
 2. **Standard YAML Frontmatter**: Must include `name` (lowercase, kebab-case) and `description` (third-person trigger explanation).
 3. **Strict Tooling Rules**: Enforce modern, deterministic package managers (strict `pnpm`, **strictly forbidding `npx` in favor of `pnpm dlx`**) and unified toolchains (e.g. `Biome` instead of legacy ESLint/Prettier combinations, and `mise` for toolchain setup in `~/.local/bin`).
 4. **Verifiable Steps**: Provide automated and manual verification commands at every milestone.
+5. **Live Documentation Freshness Protocol**: Mandate that agents actively consult upstream machine-readable agent documentation (`llms.txt`, markdown feeds like `docs.convex.dev/<path>.md`, and official agent skills) rather than relying on stale memory or fixed snippets for fast-moving framework APIs.
+

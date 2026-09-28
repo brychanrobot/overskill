@@ -1,11 +1,23 @@
 # Convex Reference for SvelteKit
 
-Official Resources:
-- Convex LLM Index: https://docs.convex.dev/llms.txt
-- Convex Svelte Guide: https://docs.convex.dev/client/svelte/overview.md
-- Convex Clerk Integration: https://docs.convex.dev/auth/clerk.md
+Official Resources & Agent Documentation:
+- **Convex LLM Index**: https://docs.convex.dev/llms.txt
+- **Official Convex Agent Skills**: https://github.com/get-convex/agent-skills
+- **Convex Svelte Guide**: https://docs.convex.dev/client/svelte/overview.md
+- **Convex Clerk Integration**: https://docs.convex.dev/auth/clerk.md
+
+## Live Freshness Protocol for Convex
+Convex renders all documentation pages as clean, raw markdown by appending `.md` to the URL. When designing schemas, implementing advanced database features, or handling edge cases, fetch the live topic markdown via `read_url_content` or HTTP GET:
+- Indexes & compound queries: `https://docs.convex.dev/database/reading-data/indexes.md`
+- Svelte client integration: `https://docs.convex.dev/client/svelte/overview.md`
+- Clerk authentication: `https://docs.convex.dev/auth/clerk.md`
+- File storage: `https://docs.convex.dev/file-storage.md`
+- Text search: `https://docs.convex.dev/text-search.md`
+- Scheduled crons: `https://docs.convex.dev/scheduling/cron-jobs.md`
+- Best practices: `https://docs.convex.dev/understanding/best-practices.md`
 
 ## Core Concepts
+
 
 1. **Reactive Backend**: Convex automatically syncs query results to the browser over WebSocket connections.
 2. **`convex-svelte`**:
