@@ -138,8 +138,11 @@ portless doctor
 > # 5. If local CA is not yet trusted, prompt the user to initialize it:
 > # portless trust
 > #
-> # 6. Start the background proxy daemon (or see references/portless.md for systemd service setup):
-> # portless proxy start
+> # 6. Start the background proxy daemon or install system startup service:
+> # (On Fedora/RHEL with SELinux, allowlist Node first:
+> #  sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
+> #  sudo restorecon -v -R "$HOME/.local/share/mise/installs/node")
+> # portless service install   # or: portless proxy start
 > ```
 
 #### 2. Verify Developer CLI Authentication States

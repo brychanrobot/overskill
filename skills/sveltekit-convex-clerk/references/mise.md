@@ -55,6 +55,18 @@ gh --version
 portless --version
 ```
 
+### Fedora / RHEL SELinux Allowlisting for Portless Service
+If running Fedora or RHEL with SELinux in enforcing mode, systemd (`init_t`) requires the Node binary to have the `bin_t` context before executing `/etc/systemd/system/portless.service`:
+
+```bash
+# Allowlist all mise Node versions for systemd execution
+sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
+sudo restorecon -v -R "$HOME/.local/share/mise/installs/node"
+
+# Install background service
+portless service install
+```
+
 ---
 
 ## 3. Project-Level Pinning (`.mise.toml`)

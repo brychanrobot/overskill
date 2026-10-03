@@ -25,10 +25,13 @@ In `overskill`, all local development environments **mandate Portless** for loca
 
 ## 1. Installation
 
-Install Portless globally (recommended by maintainers for a shared proxy daemon):
+Install Portless globally (recommended for a shared proxy daemon across all projects):
 
 ```bash
-# Global install via pnpm (recommended)
+# Global install via mise (recommended — keeps Portless synced with mise's active Node)
+mise use --global npm:portless@latest
+
+# Or global install via pnpm
 pnpm add -g portless
 
 # Verify installation
@@ -66,21 +69,34 @@ Portless routes traffic to port 443. Depending on your OS and security configura
 Portless provides native service installation that sets up `/etc/systemd/system/portless.service` to bind port 443 at system startup:
 
 ```bash
-# Install and start systemd service (requires sudo)
-sudo portless service install
+# Install and start systemd service (prompts for sudo)
+portless service install
 
 # Check service status
 portless service status
 
 # Uninstall service
-sudo portless service uninstall
+portless service uninstall
 ```
 
-> [!WARNING]
-> **Fedora / RHEL SELinux Caveat (Upstream Issue #368)**:
-> If Node.js is installed in your user home directory (common with `fnm`, `nvm`, `mise`, or `volta`), SELinux in `enforcing` mode prevents systemd (`init_t`) from executing files labeled `data_home_t`/`user_home_t`. This causes `portless.service` to enter a tight crash-loop (`status=203/EXEC`).
+> [!TIP]
+> **Fedora / RHEL SELinux Allowlisting (Resolving Upstream Issue #368)**:
+> When Node.js is managed in user space (e.g. `~/.local/share/mise/installs/node/...`), SELinux in `enforcing` mode blocks systemd (`init_t`) from executing user home binaries, causing `portless.service` to fail with `status=203/EXEC`.
 >
-> If you encounter this error on Fedora/RHEL, use **Option B** (systemd user service with unprivileged port start) or **Option C** (CLI daemon), or install distro Node (`sudo dnf install nodejs`) so systemd executes `/usr/bin/node` with `bin_t`.
+> To allow systemd to execute mise-managed Node without disabling SELinux or switching to permissive mode, assign the `bin_t` file context rule to all mise Node binaries and restore the context:
+>
+> ```bash
+> # 1. Allowlist all mise Node versions for systemd execution
+> sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
+>
+> # 2. Relabel the directory
+> sudo restorecon -v -R "$HOME/.local/share/mise/installs/node"
+>
+> # 3. Install and start the service
+> portless service install
+> ```
+>
+> Once labeled, `portless.service` starts cleanly and binds port 443 with 0 SELinux denials.
 
 ### Option B: Systemd User Service (`systemd --user`)
 To run Portless under your own user account without SELinux denials, allow unprivileged binding to port 80/443 and create a user unit:

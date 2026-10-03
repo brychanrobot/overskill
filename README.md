@@ -104,8 +104,12 @@ mise use --global gh@latest node@lts pnpm@latest npm:portless@latest
 # 4. Initialize and trust the local Portless CA certificate (one-time sudo)
 portless trust
 
-# 5. Start the background proxy daemon (or use `sudo portless service install` on systemd)
-portless proxy start
+# 5. On Fedora/RHEL with SELinux, allowlist mise Node for systemd execution:
+# sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
+# sudo restorecon -v -R "$HOME/.local/share/mise/installs/node"
+
+# 6. Install the system startup service (or run `portless proxy start`)
+portless service install
 ```
 
 > [!NOTE]
