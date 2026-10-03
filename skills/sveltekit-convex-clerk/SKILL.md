@@ -137,6 +137,9 @@ portless doctor
 >
 > # 5. If local CA is not yet trusted, prompt the user to initialize it:
 > # portless trust
+> #
+> # 6. Start the background proxy daemon (or see references/portless.md for systemd service setup):
+> # portless proxy start
 > ```
 
 #### 2. Verify Developer CLI Authentication States
@@ -290,7 +293,8 @@ All local development in `overskill` requires Portless to serve the app under a 
    ```bash
    pnpm run dev
    ```
-   Portless automatically assigns a free ephemeral port (4000–4999), auto-injects `--port` and `--host` into Vite, and serves the application at `https://<project-name>.localhost`.
+   Portless checks if the local proxy daemon is running (or prompts to auto-start it), automatically assigns a free ephemeral port (4000–4999), auto-injects `--port` and `--host` into Vite, and serves the application at `https://<project-name>.localhost`.
+   *(Tip: To keep the proxy running continuously in the background without startup prompts, run `portless proxy start` or configure a `systemd --user` service as documented in `references/portless.md`).*
 
 Ensure no legacy configuration files or dependencies were introduced. If any `.eslintrc*`, `.prettier*`, or `eslint*` dependencies exist, remove them immediately:
 

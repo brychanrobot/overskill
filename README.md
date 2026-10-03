@@ -103,6 +103,9 @@ mise use --global gh@latest node@lts pnpm@latest npm:portless@latest
 
 # 4. Initialize and trust the local Portless CA certificate (one-time sudo)
 portless trust
+
+# 5. Start the background proxy daemon (or use `sudo portless service install` on systemd)
+portless proxy start
 ```
 
 > [!NOTE]

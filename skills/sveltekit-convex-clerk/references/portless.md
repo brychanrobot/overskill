@@ -31,9 +31,6 @@ Install Portless globally (recommended by maintainers for a shared proxy daemon)
 # Global install via pnpm (recommended)
 pnpm add -g portless
 
-# Or via npm
-npm install -g portless
-
 # Verify installation
 portless --version
 ```
@@ -61,7 +58,78 @@ Once trusted, all certificates for `*.localhost` domains are signed and trusted 
 
 ---
 
-## 3. Recommended `package.json` Integration
+## 3. Background Proxy Management: System Service, User Service, or CLI Daemon
+
+Portless routes traffic to port 443. Depending on your OS and security configuration (SELinux), there are three ways to manage the background proxy daemon:
+
+### Option A: Built-in Systemd Service (`portless service install`)
+Portless provides native service installation that sets up `/etc/systemd/system/portless.service` to bind port 443 at system startup:
+
+```bash
+# Install and start systemd service (requires sudo)
+sudo portless service install
+
+# Check service status
+portless service status
+
+# Uninstall service
+sudo portless service uninstall
+```
+
+> [!WARNING]
+> **Fedora / RHEL SELinux Caveat (Upstream Issue #368)**:
+> If Node.js is installed in your user home directory (common with `fnm`, `nvm`, `mise`, or `volta`), SELinux in `enforcing` mode prevents systemd (`init_t`) from executing files labeled `data_home_t`/`user_home_t`. This causes `portless.service` to enter a tight crash-loop (`status=203/EXEC`).
+>
+> If you encounter this error on Fedora/RHEL, use **Option B** (systemd user service with unprivileged port start) or **Option C** (CLI daemon), or install distro Node (`sudo dnf install nodejs`) so systemd executes `/usr/bin/node` with `bin_t`.
+
+### Option B: Systemd User Service (`systemd --user`)
+To run Portless under your own user account without SELinux denials, allow unprivileged binding to port 80/443 and create a user unit:
+
+```bash
+# 1. Allow unprivileged processes to bind ports >= 80 (one-time sudo)
+echo "net.ipv4.ip_unprivileged_port_start=80" | sudo tee /etc/sysctl.d/50-portless.conf
+sudo sysctl --system
+
+# 2. Create the user service unit
+mkdir -p ~/.config/systemd/user
+cat << 'EOF' > ~/.config/systemd/user/portless.service
+[Unit]
+Description=Portless HTTPS Proxy (User Service)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/pnpm/portless proxy start --foreground --port 443 --https
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+EOF
+
+# 3. Enable and start the user service
+systemctl --user daemon-reload
+systemctl --user enable --now portless
+```
+
+### Option C: On-Demand CLI Daemon (`portless proxy start`)
+If you prefer not to manage systemd units, Portless can be run directly from your user terminal session:
+
+```bash
+# Start proxy in background (prompts once for sudo to bind port 443)
+portless proxy start
+
+# Or test in foreground
+portless proxy start --foreground
+
+# Stop proxy
+portless proxy stop
+```
+Because the user terminal session runs in the unconfined SELinux domain (`unconfined_t`), user-managed Node binaries run without SELinux denials.
+
+---
+
+## 4. Recommended `package.json` Integration
 
 Embed Portless directly into `package.json` so running `pnpm run dev` handles everything:
 
@@ -99,7 +167,7 @@ When running `pnpm run dev`:
 
 ---
 
-## 3. Subdomains for Auxiliary Endpoints
+## 5. Subdomains for Auxiliary Endpoints
 
 For multi-service projects, organize auxiliary services using subdomains:
 
@@ -119,7 +187,7 @@ portless preview.my-app vite preview
 
 ---
 
-## 4. Vite 6 Host Header Configuration (`allowedHosts`)
+## 6. Vite 6 Host Header Configuration (`allowedHosts`)
 
 By default, Vite 6 blocks incoming HTTP requests whose `Host` header does not match `localhost`. When proxying through Portless, configure `vite.config.ts`:
 
@@ -139,7 +207,7 @@ export default defineConfig({
 
 ---
 
-## 5. Git Worktree Automatic Subdomains
+## 7. Git Worktree Automatic Subdomains
 
 If you use `git worktree`, Portless automatically detects the worktree and prepends the branch name as a subdomain:
 
@@ -153,12 +221,16 @@ No configuration changes are needed; every worktree runs concurrently without po
 
 ---
 
-## 6. Helpful Lifecycle Commands
+## 8. Helpful Lifecycle Commands
 
 | Action | Command | Description |
 | :--- | :--- | :--- |
 | **Inspect Active Routes** | `portless list` | Shows all currently active applications, domains, and assigned ports. |
 | **Run Diagnostics** | `portless doctor` | Checks TLS certificates, CA trust, and proxy health. |
 | **Trust Certificate Authority** | `portless trust` | Adds the Portless local CA to the system trust store. |
+| **Install System Service** | `sudo portless service install` | Installs background systemd service to start proxy at boot. |
+| **Check Service Status** | `portless service status` | Inspects status of the system startup service and port 443 proxy. |
+| **Uninstall System Service** | `sudo portless service uninstall` | Removes background systemd service. |
+| **Start Proxy (Foreground)** | `portless proxy start --foreground` | Runs proxy in foreground for real-time traffic debugging. |
 | **Stop Proxy Daemon** | `portless proxy stop` | Stops the background proxy daemon. |
 | **Bypass Portless** | `PORTLESS=0 pnpm dev` | Runs the dev command directly on standard localhost. |
