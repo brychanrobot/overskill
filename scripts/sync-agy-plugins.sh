@@ -16,6 +16,9 @@ set -euo pipefail
 
 export PATH="$HOME/.gemini/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 export GIT_CONFIG_PARAMETERS="'core.fsmonitor=false'"
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0="core.fsmonitor"
+export GIT_CONFIG_VALUE_0="false"
 
 PLUGINS_DIR="${AGY_PLUGINS_DIR:-$HOME/.gemini/config/plugins}"
 LOG_FILE="${AGY_SYNC_LOG:-$HOME/.gemini/logs/plugins-sync.log}"
