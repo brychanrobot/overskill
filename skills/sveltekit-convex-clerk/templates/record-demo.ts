@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 
 export interface RecordOptions {
-  /** Target URL to record (default: http://localhost:5173) */
+  /** Target URL to record (default: http://<project-name>.localhost or http://localhost:5173) */
   url?: string;
   /** Destination path for the output GIF (default: static/demo.gif) */
   outputGifPath?: string;
@@ -27,8 +27,13 @@ export interface RecordOptions {
  * the resulting recording into an optimized, high-definition animated GIF.
  */
 export async function recordWalkthrough(options: RecordOptions = {}) {
+  const defaultUrl = process.env.LOCAL_DOMAIN
+    ? `http://${process.env.LOCAL_DOMAIN}`
+    : (process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:5173');
+
   const {
-    url = 'http://localhost:5173',
+    url = defaultUrl,
+
     outputGifPath = 'static/demo.gif',
     screenshotsDir = 'static/screenshots',
     width = 1200,

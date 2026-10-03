@@ -11,7 +11,8 @@ This skill provides an automated, end-to-end recipe for scaffolding, wiring, and
 
 | Layer | Technology | Key Capabilities / Rules |
 | :--- | :--- | :--- |
-| **Toolchain & CLI Runtime** | [`mise`](https://mise.jdx.dev) (Recommended) | Fast toolchain manager in `~/.local/bin`. Installs and manages `node` (LTS), `pnpm`, and `gh` in user space without sudo. |
+| **Toolchain & CLI Runtime** | [`mise`](https://mise.jdx.dev) (Recommended) | Fast toolchain manager in `~/.local/bin`. Installs and manages `node` (LTS), `pnpm`, `gh`, and `caddy` in user space without sudo. |
+| **Local Reverse Proxy & Domains** | [Caddy](https://caddyserver.com) (`Caddyfile`) | **MANDATORY**: Maps `<project-name>.localhost` and subdomains `<endpoint>.<project-name>.localhost` to local services, eliminating port contention and cookie conflicts. |
 | **Framework & UI** | [SvelteKit](https://svelte.dev) + TypeScript | Modern Svelte 5 runes (`$state`, `$derived`, `$effect`, `Snippet`, `{@render}`), minimal template. |
 | **Build Engine & Bundler** | [Vite](https://vite.dev) (`vite.config.ts`) | Instant HMR dev server, official `@tailwindcss/vite` compiler plugin, Vitest runner, production SSR bundling. |
 | **Styling & UI Components** | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn-svelte](https://shadcn-svelte.com) | `@tailwindcss/vite`, CSS-first design system, accessible Bits UI component primitives, dark mode ready. |
@@ -37,13 +38,19 @@ When executing this skill for non-software engineers, solo creators, or beginner
 3. **Click-by-Click Guidance for Keys**:
    - Guide the user step-by-step with direct clickable links when setting up Clerk and Convex. Never use terms like "JWT issuer domain" without explaining where to click.
 4. **Milestone Celebrations & Clickable Links**:
-   - Always present a clickable local preview link: `http://localhost:5173`.
+   - Always present a clickable local preview link using Caddy: `http://<project-name>.localhost` (with subdomains `<endpoint>.<project-name>.localhost` for auxiliary endpoints), keeping all services tidy without port collisions.
    - Always present the live mobile-friendly Vercel production link: `https://<app>.vercel.app` with instructions on how to test logging in on their phone.
 5. **Proactive Toolchain Setup Offer with `mise`**:
-   - If `node`, `pnpm`, or `gh` are missing, never fail or leave the user stranded with a missing command error.
-   - Gently offer to set up the entire toolchain using `mise` in `~/.local/bin` (no sudo or admin privileges required).
+   - If `node`, `pnpm`, `gh`, or `caddy` are missing, never fail or leave the user stranded with a missing command error.
+   - Gently offer to set up the entire toolchain using `mise` in `~/.local/bin` (`node@lts`, `pnpm@latest`, `gh@latest`, `caddy@latest` — no sudo or admin privileges required).
 6. **Strictly Forbid `npx` (Only `pnpm dlx`)**:
    - **Never** invoke or suggest `npx`. All one-off CLIs must run via `pnpm dlx` (e.g., `pnpm dlx sv create`, `pnpm dlx vercel whoami`, `pnpm dlx convex dev`). Project packages run via `pnpm <command>`.
+7. **Mandatory Caddy Local Routing (`<project-name>.localhost` & Subdomains)**:
+   - **Require Caddy** for local development. Every project **must** configure a local `Caddyfile`.
+   - The primary application endpoint must be served at `http://<project-name>.localhost`.
+   - Auxiliary services (e.g. backend API, preview server, websocket server) **must** use dedicated subdomains: `http://<endpoint>.<project-name>.localhost` (e.g. `api.<project-name>.localhost`, `preview.<project-name>.localhost`).
+   - Under RFC 6761, `*.localhost` domains natively resolve to loopback (`127.0.0.1`) without editing `/etc/hosts` or needing elevated privileges.
+   - Never expose raw colliding port numbers (`:5173`, `:5174`, `:3000`) or rely on raw `localhost:<port>` where cookies and local storage collide across different apps.
 
 ---
 
@@ -92,20 +99,21 @@ flowchart TD
 
 ### Step 1: System Prerequisites & Idea Discovery
 
-#### 1. Toolchain & CLI Availability Check (Node, pnpm, gh with mise)
-Verify that the core runtime tools (`node`, `pnpm`, `gh`) are installed on the host:
+#### 1. Toolchain & CLI Availability Check (Node, pnpm, gh, caddy with mise)
+Verify that the core runtime tools (`node`, `pnpm`, `gh`, `caddy`) are installed on the host:
 
 ```bash
 # Check presence of required toolchains
 command -v node
 command -v pnpm
 command -v gh
+command -v caddy
 ```
 
 > [!IMPORTANT]
 > **Proactive Toolchain Setup Offer with `mise`**:
-> If any of these tools (`node`, `pnpm`, or `gh`) are missing, the agent MUST offer to set up the toolchain automatically using `mise` in `~/.local/bin`:
-> > *"I noticed some required tools ([missing tools, e.g. Node.js, pnpm, or GitHub CLI]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
+> If any of these tools (`node`, `pnpm`, `gh`, or `caddy`) are missing, the agent MUST offer to set up the toolchain automatically using `mise` in `~/.local/bin`:
+> > *"I noticed some required tools ([missing tools, e.g. Node.js, pnpm, GitHub CLI, or Caddy]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
 >
 > If the user accepts (or in autonomous agent mode), execute:
 > ```bash
@@ -117,8 +125,8 @@ command -v gh
 > # 2. Ensure ~/.local/bin and mise shims are available in PATH
 > export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 >
-> # 3. Install required toolchain (Node.js LTS, pnpm, and GitHub CLI)
-> "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest
+> # 3. Install required toolchain (Node.js LTS, pnpm, GitHub CLI, and Caddy)
+> "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest caddy@latest
 >
 > # 4. Activate mise for the current shell session
 > eval "$("$HOME/.local/bin/mise" activate bash)"
@@ -187,13 +195,14 @@ pnpm exec playwright install --with-deps chromium
 > When an agent or developer runs tests while `vite dev` is active in the background, `vite build` wipes `.svelte-kit/output` and unlinks `.svelte-kit/types/` and `.svelte-kit/generated/`. The active `vite dev` server crashes with `500 ENOENT: stat $types.d.ts`.
 >
 > **Mandatory Architecture Rule**:
-> 1. Overwrite `playwright.config.ts` to reuse the active dev server and bind to dynamic `PORT`:
+> 1. Overwrite `playwright.config.ts` to reuse the active dev server, bind to dynamic `PORT`, and support local domain:
 >    ```ts
 >    // playwright.config.ts
 >    import { defineConfig, devices } from '@playwright/test';
 >
 >    const port = Number(process.env.PORT) || 5173;
->    const baseURL = `http://localhost:${port}`;
+>    const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
+>      (process.env.LOCAL_DOMAIN ? `http://${process.env.LOCAL_DOMAIN}` : `http://localhost:${port}`);
 >
 >    export default defineConfig({
 >      testDir: './e2e',
@@ -214,7 +223,7 @@ pnpm exec playwright install --with-deps chromium
 >      ],
 >    });
 >    ```
-> 2. Ensure `vite.config.ts` includes `strictPort: true` to prevent silent port drift:
+> 2. Ensure `vite.config.ts` includes `strictPort: true` to prevent port drift, and `allowedHosts: true` to allow Caddy proxying:
 >    ```ts
 >    // vite.config.ts
 >    import { sveltekit } from '@sveltejs/kit/vite';
@@ -225,10 +234,45 @@ pnpm exec playwright install --with-deps chromium
 >
 >    export default defineConfig({
 >      plugins: [tailwindcss(), sveltekit()],
->      server: { port, strictPort: true },
+>      server: {
+>        port,
+>        strictPort: true,
+>        allowedHosts: true, // Allow Caddy reverse proxy via *.localhost (e.g. <project-name>.localhost)
+>      },
 >    });
 >    ```
 > *Result*: Instant test execution (<50ms startup), zero redundant rebuilds, zero filesystem collisions, and multi-agent isolation via `PORT=XXXX`.
+
+#### 3. Mandatory Caddy Configuration (`<project-name>.localhost` & Subdomains)
+
+All local development in `overskill` requires Caddy to serve the app under a base name of `<project-name>.localhost` and subdomains `<endpoint>.<project-name>.localhost`, completely eliminating port contention and cookie conflicts.
+
+1. **Generate `Caddyfile`**:
+   Create `Caddyfile` in the project root:
+   ```caddy
+   # Primary application frontend
+   http://<project-name>.localhost, <project-name>.localhost {
+       reverse_proxy localhost:5173
+   }
+
+   # Auxiliary backend API endpoint (if applicable)
+   http://api.<project-name>.localhost, api.<project-name>.localhost {
+       reverse_proxy localhost:3000
+   }
+
+   # Production build preview endpoint
+   http://preview.<project-name>.localhost, preview.<project-name>.localhost {
+       reverse_proxy localhost:4173
+   }
+   ```
+
+2. **Native RFC 6761 Loopback (Zero Sudo / No `/etc/hosts` Editing)**:
+   Under RFC 6761, all `*.localhost` domains and subdomains automatically resolve to `127.0.0.1` and `::1` across all modern web browsers and OS network resolvers. **No `/etc/hosts` changes or administrator/sudo privileges are required.**
+
+3. **Start or Reload Caddy in the Background**:
+   ```bash
+   caddy start
+   ```
 
 Ensure no legacy configuration files or dependencies were introduced. If any `.eslintrc*`, `.prettier*`, or `eslint*` dependencies exist, remove them immediately:
 
@@ -943,8 +987,8 @@ Non-SWE creators and users benefit immensely from seeing visual proof of their w
 mkdir -p scripts
 cp templates/record-demo.ts scripts/record-demo.ts 2>/dev/null || true
 
-# 2. Run the recorder with the dev server running (http://localhost:5173)
-node scripts/record-demo.ts
+# 2. Run the recorder with the dev server running (via Caddy http://<project-name>.localhost)
+LOCAL_DOMAIN="<project-name>.localhost" node scripts/record-demo.ts
 ```
 
 > [!TIP]
@@ -1076,7 +1120,7 @@ gh repo view
 Present the completed application to the user with enthusiasm, clear instructions, and shareable links:
 
 1. **Local Preview Link**:
-   > *"💻 **Local Preview:** You can test your app right now on your computer at: `http://localhost:5173` (run `pnpm run dev`)."*
+   > *"💻 **Local Preview:** You can test your app right now on your computer at: `http://<project-name>.localhost` (served via Caddy — zero port collisions or messy numbers!)."*
 
 2. **Live Mobile & Web Share Link**:
    > *"🎉 **Your App is Live on the Internet!**"*
@@ -1097,12 +1141,13 @@ Present the completed application to the user with enthusiasm, clear instruction
 - [ ] Tailwind CSS v4 configured with `@tailwindcss/vite`; `shadcn-svelte` components and `src/app.css` configured.
 - [ ] No `eslint` or `prettier` packages or configuration files exist in the project root.
 - [ ] `biome.json` is configured and `pnpm run check` passes without warnings or formatting errors.
+- [ ] Caddyfile configured with `<project-name>.localhost` base domain and subdomains, and Caddy running.
 - [ ] Vitest unit tests and Playwright E2E tests are configured and pass (`pnpm run test`).
 - [ ] Visual proof captured (screenshots and demo GIF via Playwright + ffmpeg) and embedded in walkthrough artifact.
 - [ ] `convex/auth.config.ts` matches Clerk's Frontend API URL.
 - [ ] `src/routes/+layout.svelte` establishes reactive token passing from `useClerkContext()` to `setupConvex()`.
 - [ ] Remote GitHub repository created via `gh repo create` (with MIT license if public).
 - [ ] Project successfully deployed to Vercel with production environment variables verified.
-- [ ] Live shareable Vercel URL and local preview URL presented clearly to the user.
+- [ ] Live shareable Vercel URL and local preview URL (`http://<project-name>.localhost`) presented clearly to the user.
 
 

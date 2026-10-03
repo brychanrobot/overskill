@@ -51,7 +51,8 @@ Configure `playwright.config.ts` to spin up or reuse the dev server, matching Vi
 import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.PORT) || 5173;
-const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || `http://localhost:${port}`;
+const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
+  (process.env.LOCAL_DOMAIN ? `http://${process.env.LOCAL_DOMAIN}` : `http://localhost:${port}`);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -79,7 +80,7 @@ export default defineConfig({
 });
 ```
 
-And in `vite.config.ts`, align the port:
+And in `vite.config.ts`, align the port and allow Caddy reverse proxy hosts:
 ```typescript
 const port = Number(process.env.PORT) || 5173;
 
@@ -88,6 +89,7 @@ export default defineConfig({
   server: {
     port,
     strictPort: true,
+    allowedHosts: true, // Allow Caddy reverse proxy via <project-name>.localhost
   },
 });
 ```

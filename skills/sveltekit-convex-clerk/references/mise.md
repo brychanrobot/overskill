@@ -6,6 +6,7 @@ In the `sveltekit-convex-clerk` workflow, `mise` is the recommended mechanism fo
 - **`node`** (Node.js LTS, e.g. 20.x or 22.x)
 - **`pnpm`** (Strict package manager)
 - **`gh`** (GitHub CLI for repository creation and auth)
+- **`caddy`** (Local reverse proxy for `<project-name>.localhost` and subdomains)
 
 ---
 
@@ -39,8 +40,8 @@ eval "$(mise activate bash)"   # or: eval "$(mise activate zsh)"
 Install the essential developer stack globally with a single command:
 
 ```bash
-# Install and activate Node.js LTS, pnpm, and GitHub CLI
-~/.local/bin/mise use --global node@lts pnpm@latest gh@latest
+# Install and activate Node.js LTS, pnpm, GitHub CLI, and Caddy
+~/.local/bin/mise use --global node@lts pnpm@latest gh@latest caddy@latest
 ```
 
 Verify versions:
@@ -49,6 +50,7 @@ Verify versions:
 node -v   # e.g. v22.x.x
 pnpm -v   # e.g. 10.x.x or 9.x.x
 gh --version
+caddy version
 ```
 
 ---
@@ -62,6 +64,7 @@ Place a `.mise.toml` file in the project root to guarantee that all developers a
 node = "lts"
 pnpm = "latest"
 gh = "latest"
+caddy = "latest"
 ```
 
 When entering the project directory, running `mise install` installs any missing pinned toolchains automatically.
@@ -70,7 +73,7 @@ When entering the project directory, running `mise install` installs any missing
 
 ## 4. Agent Autonomous Offer Protocol (For Non-SWEs)
 
-When an agent detects that `node`, `pnpm`, or `gh` is missing:
+When an agent detects that `node`, `pnpm`, `gh`, or `caddy` is missing:
 1. It does **not** fail or output error logs.
 2. It politely asks the user:
    > *"I noticed some required tools ([missing tools]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
@@ -80,6 +83,7 @@ When an agent detects that `node`, `pnpm`, or `gh` is missing:
      curl -fsSL https://mise.run | sh
    fi
    export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
-   "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest
+   "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest caddy@latest
    eval "$("$HOME/.local/bin/mise" activate bash)"
    ```
+

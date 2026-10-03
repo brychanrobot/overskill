@@ -1,0 +1,28 @@
+# ==============================================================================
+# Caddyfile: Local Domain & Subdomain Routing for <project-name>
+#
+# Base Domain:
+#   http://<project-name>.localhost -> Reverse proxies to primary frontend (default :5173)
+#
+# Auxiliary Subdomains (prevents port contention and cookie collisions):
+#   http://api.<project-name>.localhost     -> API / backend service (default :3000)
+#   http://preview.<project-name>.localhost -> Production build preview (default :4173)
+#
+# Under RFC 6761, *.localhost natively resolves to loopback (127.0.0.1) across
+# browsers and OS networking without needing /etc/hosts changes or sudo.
+# ==============================================================================
+
+# Primary application frontend
+http://{$PROJECT_NAME:app}.localhost, {$PROJECT_NAME:app}.localhost {
+    reverse_proxy localhost:{$PORT:5173}
+}
+
+# Backend API endpoint (if applicable)
+http://api.{$PROJECT_NAME:app}.localhost, api.{$PROJECT_NAME:app}.localhost {
+    reverse_proxy localhost:{$API_PORT:3000}
+}
+
+# Production build preview endpoint
+http://preview.{$PROJECT_NAME:app}.localhost, preview.{$PROJECT_NAME:app}.localhost {
+    reverse_proxy localhost:{$PREVIEW_PORT:4173}
+}

@@ -2,3 +2,5 @@
 node = "lts"
 pnpm = "latest"
 gh = "latest"
+caddy = "latest"
+
