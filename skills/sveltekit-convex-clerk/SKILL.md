@@ -137,6 +137,9 @@ portless doctor
 >
 > # 5. If local CA is not yet trusted, prompt the user to initialize it:
 > # portless trust
+> # (On Linux Chrome/Chromium, import into NSS databases for native and Flatpak Chrome:
+> #  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem"
+> #  [ -d "$HOME/.var/app/com.google.Chrome/data/pki/nssdb" ] && certutil -d sql:$HOME/.var/app/com.google.Chrome/data/pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem")
 > #
 > # 6. Start the background proxy daemon or install system startup service:
 > # (On Fedora/RHEL with SELinux, allowlist Node first:

@@ -103,6 +103,7 @@ mise use --global gh@latest node@lts pnpm@latest npm:portless@latest
 
 # 4. Initialize and trust the local Portless CA certificate (one-time sudo)
 portless trust
+# (On Linux Chrome/Chromium, import into NSS: certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem")
 
 # 5. On Fedora/RHEL with SELinux, allowlist mise Node for systemd execution:
 # sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"

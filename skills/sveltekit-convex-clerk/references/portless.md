@@ -57,7 +57,39 @@ portless trust
 portless doctor
 ```
 
-Once trusted, all certificates for `*.localhost` domains are signed and trusted automatically by your operating system and browsers (Chrome, Firefox, Safari, Edge) with a green lock.
+Once trusted, all certificates for `*.localhost` domains are signed and trusted automatically by your operating system and browsers with a green lock.
+
+### Linux Browser Trust (Chrome, Chromium, Brave, Flatpak)
+
+On macOS and Windows, `portless trust` automatically registers the CA in the system keychain and root store used by all browsers.
+
+On **Linux**, `portless trust` updates the OS certificate store (`/etc/pki/ca-trust` or `/etc/ssl/certs`). However, **Chrome and Chromium do not read the Linux OS certificate store**—they manage trust independently via **NSS databases (`nssdb`)**:
+- **Native Chrome / Chromium** uses `~/.pki/nssdb` (or `~/.local/share/pki/nssdb`).
+- **Flatpak Chrome** runs sandboxed and uses `~/.var/app/com.google.Chrome/data/pki/nssdb`.
+
+#### Option A: One-line CLI Import with `certutil` (Recommended)
+Install NSS tools (`sudo dnf install nss-tools` on Fedora/RHEL or `sudo apt install libnss3-tools` on Ubuntu/Debian), then import the Portless CA:
+
+```bash
+# Import into native Chrome / Chromium NSS database
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem"
+[ -d "$HOME/.local/share/pki/nssdb" ] && certutil -d sql:$HOME/.local/share/pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem"
+
+# If using Flatpak Chrome, import into the Flatpak sandbox NSS database
+[ -d "$HOME/.var/app/com.google.Chrome/data/pki/nssdb" ] && \
+  certutil -d sql:$HOME/.var/app/com.google.Chrome/data/pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem"
+```
+
+*Note: Completely restart Chrome after running `certutil` for the updated database to take effect.*
+
+#### Option B: Chrome GUI Import (Zero Tools Needed)
+If you prefer not to install `nss-tools`:
+1. In Chrome, navigate to `chrome://certificate-manager/` (or `chrome://settings/certificates`).
+2. Under **Local certificates**, select **Authorities** (or **Custom / User**).
+3. Click **Import** (or Add).
+4. Select `$HOME/.portless/ca.pem` *(in the file picker, press `Ctrl + H` if hidden files are not shown)*.
+5. Check **"Trust this certificate for identifying websites"** and click **OK**.
+6. Restart Chrome.
 
 ---
 
