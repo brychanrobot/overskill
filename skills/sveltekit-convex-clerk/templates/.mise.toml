@@ -2,5 +2,5 @@
 node = "lts"
 pnpm = "latest"
 gh = "latest"
-caddy = "latest"
-
+# mise's registry backend prefix for npm registry packages is "npm:" (no "pnpm:" backend exists in mise)
+"npm:portless" = "latest"

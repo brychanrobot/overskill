@@ -1,10 +1,10 @@
 import { chromium, type Page } from '@playwright/test';
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, unlinkSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 export interface RecordOptions {
-  /** Target URL to record (default: http://<project-name>.localhost or http://localhost:5173) */
+  /** Target URL to record (default: https://<project-name>.localhost or process.env.PORTLESS_URL) */
   url?: string;
   /** Destination path for the output GIF (default: static/demo.gif) */
   outputGifPath?: string;
@@ -27,9 +27,17 @@ export interface RecordOptions {
  * the resulting recording into an optimized, high-definition animated GIF.
  */
 export async function recordWalkthrough(options: RecordOptions = {}) {
-  const defaultUrl = process.env.LOCAL_DOMAIN
-    ? `http://${process.env.LOCAL_DOMAIN}`
-    : (process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:5173');
+  let projectName = 'app';
+  try {
+    const pkgPath = path.resolve('package.json');
+    if (existsSync(pkgPath)) {
+      projectName = JSON.parse(readFileSync(pkgPath, 'utf-8')).name || 'app';
+    }
+  } catch {}
+
+  const defaultUrl = process.env.PLAYWRIGHT_TEST_BASE_URL ||
+    process.env.PORTLESS_URL ||
+    (process.env.LOCAL_DOMAIN ? `https://${process.env.LOCAL_DOMAIN}` : `https://${projectName}.localhost`);
 
   const {
     url = defaultUrl,

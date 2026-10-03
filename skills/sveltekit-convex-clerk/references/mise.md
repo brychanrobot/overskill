@@ -6,7 +6,7 @@ In the `sveltekit-convex-clerk` workflow, `mise` is the recommended mechanism fo
 - **`node`** (Node.js LTS, e.g. 20.x or 22.x)
 - **`pnpm`** (Strict package manager)
 - **`gh`** (GitHub CLI for repository creation and auth)
-- **`caddy`** (Local reverse proxy for `<project-name>.localhost` and subdomains)
+- **`portless`** (Local development domain proxy and automatic port allocator for `<project-name>.localhost`)
 
 ---
 
@@ -40,9 +40,11 @@ eval "$(mise activate bash)"   # or: eval "$(mise activate zsh)"
 Install the essential developer stack globally with a single command:
 
 ```bash
-# Install and activate Node.js LTS, pnpm, GitHub CLI, and Caddy
-~/.local/bin/mise use --global node@lts pnpm@latest gh@latest caddy@latest
+# Install and activate Node.js LTS, pnpm, GitHub CLI, and Portless
+~/.local/bin/mise use --global node@lts pnpm@latest gh@latest npm:portless@latest
 ```
+
+*(Note: mise's registry backend prefix for npm packages is `npm:`, so Portless is pinned as `npm:portless@latest`).*
 
 Verify versions:
 
@@ -50,7 +52,7 @@ Verify versions:
 node -v   # e.g. v22.x.x
 pnpm -v   # e.g. 10.x.x or 9.x.x
 gh --version
-caddy version
+portless --version
 ```
 
 ---
@@ -64,7 +66,8 @@ Place a `.mise.toml` file in the project root to guarantee that all developers a
 node = "lts"
 pnpm = "latest"
 gh = "latest"
-caddy = "latest"
+# mise's registry backend prefix for npm registry packages is "npm:" (no "pnpm:" backend exists in mise)
+"npm:portless" = "latest"
 ```
 
 When entering the project directory, running `mise install` installs any missing pinned toolchains automatically.
@@ -73,7 +76,7 @@ When entering the project directory, running `mise install` installs any missing
 
 ## 4. Agent Autonomous Offer Protocol (For Non-SWEs)
 
-When an agent detects that `node`, `pnpm`, `gh`, or `caddy` is missing:
+When an agent detects that `node`, `pnpm`, `gh`, or `portless` is missing:
 1. It does **not** fail or output error logs.
 2. It politely asks the user:
    > *"I noticed some required tools ([missing tools]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
@@ -83,7 +86,6 @@ When an agent detects that `node`, `pnpm`, `gh`, or `caddy` is missing:
      curl -fsSL https://mise.run | sh
    fi
    export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
-   "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest caddy@latest
+   "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest npm:portless@latest
    eval "$("$HOME/.local/bin/mise" activate bash)"
    ```
-

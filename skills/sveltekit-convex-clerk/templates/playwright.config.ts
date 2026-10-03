@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import pkg from './package.json';
 
-const port = Number(process.env.PORT) || 5173;
+const projectName = pkg.name || process.env.npm_package_name || 'app';
 const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
-  (process.env.LOCAL_DOMAIN ? `http://${process.env.LOCAL_DOMAIN}` : `http://localhost:${port}`);
-
+  process.env.PORTLESS_URL ||
+  (process.env.LOCAL_DOMAIN ? `https://${process.env.LOCAL_DOMAIN}` : `https://${projectName}.localhost`);
 
 export default defineConfig({
   testDir: './e2e',

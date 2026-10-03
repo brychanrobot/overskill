@@ -44,15 +44,17 @@ webServer: {
 When an AI agent or developer runs `pnpm run test:e2e` while `vite dev` is running concurrently in the background, `vite build` wipes `.svelte-kit/output` and regenerates `.svelte-kit/types/` and `.svelte-kit/generated/`.
 The active dev server's file watcher catches the deletion and tries to stat `.svelte-kit/types/src/routes/$types.d.ts` at the exact microsecond `vite build` unlinked it, crashing the dev server with `500 ENOENT: stat $types.d.ts`.
 
-### The Solution: Reusing Active Dev Server
-Configure `playwright.config.ts` to spin up or reuse the dev server, matching Vite's port dynamically:
+### The Solution: Reusing Active Dev Server with Portless
+Configure `playwright.config.ts` to spin up or reuse the dev server, connecting via Portless (`https://<project-name>.localhost` or `process.env.PORTLESS_URL`):
 
 ```typescript
 import { defineConfig, devices } from '@playwright/test';
+import pkg from './package.json';
 
-const port = Number(process.env.PORT) || 5173;
+const projectName = pkg.name || process.env.npm_package_name || 'app';
 const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
-  (process.env.LOCAL_DOMAIN ? `http://${process.env.LOCAL_DOMAIN}` : `http://localhost:${port}`);
+  process.env.PORTLESS_URL ||
+  (process.env.LOCAL_DOMAIN ? `https://${process.env.LOCAL_DOMAIN}` : `https://${projectName}.localhost`);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -80,16 +82,22 @@ export default defineConfig({
 });
 ```
 
-And in `vite.config.ts`, align the port and allow Caddy reverse proxy hosts:
+And in `vite.config.ts`, enable `allowedHosts: true` so the Portless proxy on `*.localhost` can communicate with Vite:
 ```typescript
-const port = Number(process.env.PORT) || 5173;
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
-    port,
+    // Portless automatically assigns an ephemeral port and injects --port / PORT
     strictPort: true,
-    allowedHosts: true, // Allow Caddy reverse proxy via <project-name>.localhost
+    allowedHosts: true, // Allow Portless proxy on *.localhost (e.g. <project-name>.localhost)
+  },
+  preview: {
+    strictPort: true,
+    allowedHosts: true,
   },
 });
 ```

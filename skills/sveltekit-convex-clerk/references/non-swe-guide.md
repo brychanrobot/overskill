@@ -30,21 +30,23 @@ Never say *"configure your JWT template on Clerk"*. Provide exact click-by-click
 
 ## 5. Celebration & Shareable Links
 When deployment completes, celebrate and hand off clear, clickable links:
-- **Local Test**: `http://<project-name>.localhost` ("Click here to test it on your computer right now — no port collisions, messy numbers, or admin permissions required!")
+- **Local Test**: `https://<project-name>.localhost` ("Click here to test it on your computer right now — no port collisions, messy numbers, or admin permissions required!")
 - **Live Link**: `https://<app-name>.vercel.app` ("🎉 Your app is live on the internet! Here is your link to open on your phone or text to friends!")
 - Suggest 2–3 fun next steps (e.g. "Would you like to customize the colors, add photo uploads, or add a search bar?").
 
 ## 6. Proactive Toolchain Setup Offer with `mise`
-- If runtime tools (`node`, `pnpm`, `gh`, or `caddy`) are missing, never fail or leave the user stranded with a confusing command not found error.
+- If runtime tools (`node`, `pnpm`, `gh`, or `portless`) are missing, never fail or leave the user stranded with a confusing command not found error.
 - Offer to install and configure everything cleanly in `~/.local/bin` using `mise`:
   > *"I noticed some required tools ([missing tools]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
 
 ## 7. Strictly Forbid `npx` (Only `pnpm dlx`)
 - **Never** execute or advise using `npx`. All one-off CLIs must run via `pnpm dlx` (e.g. `pnpm dlx sv create`, `pnpm dlx vercel whoami`). Installed project tools run via `pnpm <command>`.
 
-## 8. Local Domain Routing with Caddy (`.localhost` & Subdomains)
-- Always route local traffic through Caddy using the project's base name: `http://<project-name>.localhost`.
-- If a project needs auxiliary endpoints (e.g. API, preview), always use subdomains: `http://<endpoint>.<project-name>.localhost` (e.g. `api.<project-name>.localhost`, `preview.<project-name>.localhost`).
-- Under RFC 6761, `*.localhost` domains resolve to loopback automatically in all browsers and OS resolvers without editing `/etc/hosts` or needing sudo.
+## 8. Local Domain Routing with Portless (`.localhost` & Subdomains)
+- Always route local traffic through Portless using the project's base name: `https://<project-name>.localhost`.
+- If a project needs auxiliary endpoints (e.g. API, preview), always use subdomains: `https://<endpoint>.<project-name>.localhost` (e.g. `api.<project-name>.localhost`, `preview.<project-name>.localhost`).
+- Under RFC 6761, `*.localhost` domains resolve to loopback automatically in all browsers and OS resolvers without editing `/etc/hosts`.
+- Portless automatically assigns free ephemeral ports (4000–4999) under the hood and auto-injects them into `vite dev`, so users never have to configure port numbers or resolve "port already in use" errors.
+- Embed Portless directly into `package.json` (`"dev": "portless run vite dev"` or `"portless": { "name": "<project-name>", "script": "dev:app" }`).
 - Never expose raw, colliding port numbers (`:5173`, `:5174`, `:3000`) to non-technical users.
 

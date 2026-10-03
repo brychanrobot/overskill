@@ -89,7 +89,7 @@ curl -sSL https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/s
 
 ## Toolchain Setup with `mise` (Recommended)
 
-To ensure consistent, reproducible execution without requiring root (`sudo`) permissions or polluting system directories, we recommend [`mise`](https://mise.jdx.dev) to manage essential developer toolchains (`gh`, `node`, `pnpm`, and `caddy`) directly in `~/.local/bin`:
+To ensure consistent, reproducible execution without requiring root (`sudo`) permissions or polluting system directories, we recommend [`mise`](https://mise.jdx.dev) to manage essential developer toolchains (`gh`, `node`, `pnpm`, and `portless`) directly in `~/.local/bin`:
 
 ```bash
 # 1. Install mise to ~/.local/bin
@@ -98,8 +98,11 @@ curl -fsSL https://mise.run | sh
 # 2. Ensure ~/.local/bin and shims are in your PATH
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
-# 3. Install GitHub CLI, Node.js LTS, pnpm, and Caddy
-mise use --global gh@latest node@lts pnpm@latest caddy@latest
+# 3. Install GitHub CLI, Node.js LTS, pnpm, and Portless
+mise use --global gh@latest node@lts pnpm@latest npm:portless@latest
+
+# 4. Initialize and trust the local Portless CA certificate (one-time sudo)
+portless trust
 ```
 
 > [!NOTE]
@@ -107,13 +110,14 @@ mise use --global gh@latest node@lts pnpm@latest caddy@latest
 
 ---
 
-## Local Domain Routing with Caddy (`.localhost` & Subdomains)
+## Local Domain Routing with Portless (`.localhost` & Subdomains)
 
-All local development in `overskill` requires [Caddy](https://caddyserver.com) for reverse proxying:
-- **Base Domain**: `http://<project-name>.localhost` (e.g. `http://my-app.localhost`)
-- **Auxiliary Endpoints**: `http://<endpoint>.<project-name>.localhost` (e.g. `http://api.my-app.localhost`, `http://preview.my-app.localhost`)
-- **RFC 6761 Zero-Configuration Loopback**: Under RFC 6761, `*.localhost` domains natively resolve to `127.0.0.1` and `::1` across all modern browsers and OS networking resolvers. **No `/etc/hosts` editing or sudo privileges are required.**
-- **No Port Contention & Isolated Cookies**: Completely eliminates port conflicts (`:5173`, `:5174`, `:3000`) and prevents auth session/cookie collisions between projects.
+All local development in `overskill` uses [Portless](https://github.com/vercel-labs/portless) (by Vercel Labs) for zero-configuration local domain routing and automatic ephemeral port allocation:
+- **Base Domain**: `https://<project-name>.localhost` (e.g. `https://my-app.localhost`)
+- **Auxiliary Endpoints**: `https://<endpoint>.<project-name>.localhost` (e.g. `https://api.my-app.localhost`, `https://preview.my-app.localhost`)
+- **RFC 6761 Zero-Configuration Loopback**: Under RFC 6761, `*.localhost` domains natively resolve to `127.0.0.1` and `::1` across all modern browsers and OS networking resolvers. **No `/etc/hosts` editing is required.**
+- **Automatic Ephemeral Port Allocation**: Portless automatically assigns an ephemeral port in the 4000–4999 range and forwards traffic from port 80/443 without manual port assignments or collisions.
+- **Native HTTPS & Isolated Cookies**: Portless issues and trusts local TLS certificates via `portless trust`, ensuring development matches production HTTPS and completely prevents auth session/cookie collisions between projects.
 
 ---
 
@@ -141,5 +145,5 @@ overskill/
 3. **Strict Tooling Rules**: Enforce modern, deterministic package managers (strict `pnpm`, **strictly forbidding `npx` in favor of `pnpm dlx`**) and unified toolchains (e.g. `Biome` instead of legacy ESLint/Prettier combinations, and `mise` for toolchain setup in `~/.local/bin`).
 4. **Verifiable Steps**: Provide automated and manual verification commands at every milestone.
 5. **Live Documentation Freshness Protocol**: Mandate that agents actively consult upstream machine-readable agent documentation (`llms.txt`, markdown feeds like `docs.convex.dev/<path>.md`, and official agent skills) rather than relying on stale memory or fixed snippets for fast-moving framework APIs.
-6. **Mandatory Caddy Local Routing**: Mandate Caddy for local development reverse proxying, serving base applications at `<project-name>.localhost` and auxiliary endpoints at `<endpoint>.<project-name>.localhost` using RFC 6761 native loopback to eliminate port collisions and cookie contention.
+6. **Mandatory Portless Local Routing**: Mandate Portless for local development routing, serving base applications at `https://<project-name>.localhost` and auxiliary endpoints at `https://<endpoint>.<project-name>.localhost` with native HTTPS and automatic ephemeral port management to eliminate port collisions and cookie contention.
 
