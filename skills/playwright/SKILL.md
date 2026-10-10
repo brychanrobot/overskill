@@ -119,7 +119,69 @@ Reference the captured screenshot in your `walkthrough.md` or response:
 
 ---
 
-## 3. When to Use Playwright MCP vs Automated Playwright Specs
+## 3. Authenticated Testing & Test User Accounts (Clerk)
+
+When beta-testing apps protected by authentication (e.g. Clerk with `<SignedIn>` / `<SignedOut>`), agents need a reliable way to authenticate without being blocked by bot protection (Turnstile/hCaptcha), MFA prompts, or email OTP codes.
+
+### Strategy 1: Instant Sign-In Ticket URL (`__clerk_ticket`) — Recommended for Agents
+
+The fastest, zero-friction way for an agent to sign into a local session is via a Clerk **Sign-In Ticket Token**.
+
+1. **Provision Test User & Ticket**:
+   Run the project's test user provisioner script (generated from `templates/create-test-user.ts`):
+   ```bash
+   node scripts/create-test-user.ts
+   ```
+   *Under the hood, this script uses `CLERK_SECRET_KEY` to:*
+   - Check if `test-agent@example.com` exists in Clerk; creates it if missing.
+   - Calls Clerk's Backend API `POST /v1/sign_in_tokens` to generate a 24-hour single-use ticket token.
+   - Outputs the local ticket URL:
+     `https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz`
+
+2. **Authenticate the Headless Browser**:
+   The agent calls `browser_navigate` directly with the ticket URL:
+   ```json
+   browser_navigate({
+     "url": "https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz"
+   })
+   ```
+   *Result*: Clerk frontend automatically detects `__clerk_ticket`, completes the authentication handshake, sets session cookies, and redirects into the app as `test-agent@example.com`. The agent can now test all protected routes, Convex queries, and mutations!
+
+---
+
+### Strategy 2: Pre-Captured Session State (`storageState`) — For Repeated Runs & E2E
+
+To avoid repeating the login flow across multiple test runs:
+
+1. **Generate Session State**:
+   ```bash
+   node scripts/create-test-user.ts --save-session
+   ```
+   This automatically visits the ticket URL headlessly and exports authenticated cookies and localStorage to `playwright/.clerk/user.json`.
+
+2. **Use in Automated E2E Specs (`playwright.config.ts`)**:
+   ```ts
+   import { defineConfig } from '@playwright/test';
+
+   export default defineConfig({
+     use: {
+       baseURL: process.env.PORTLESS_URL || 'https://my-app.localhost',
+       storageState: 'playwright/.clerk/user.json', // Starts every test pre-authenticated!
+     },
+   });
+   ```
+
+---
+
+### Strategy 3: Clerk Built-In Test Mode (`424242`)
+
+For testing manual registration/login UI forms directly:
+- **Test Email Pattern**: Use any address ending with `+clerk_test@example.com` (e.g. `jane+clerk_test@example.com`).
+- **Fixed Verification Code**: Clerk development instances accept `424242` as the verification code for all OTP challenges, eliminating the need to check real mailboxes.
+
+---
+
+## 4. When to Use Playwright MCP vs Automated Playwright Specs
 
 | Capability | Playwright MCP (Interactive) | Automated Specs (`pnpm test:e2e`) |
 | :--- | :--- | :--- |
@@ -130,8 +192,10 @@ Reference the captured screenshot in your `walkthrough.md` or response:
 
 ---
 
-## 4. Best Practices & Troubleshooting
+## 5. Best Practices & Troubleshooting
 
 1. **Always Use `fullPage: true` for Layout Reviews**: When capturing page overviews, set `fullPage: true` to inspect footer alignments, full list rendering, and overflow scrollbars.
 2. **Check for Hidden Modals**: When testing authentication (Clerk) or dialogs (shadcn), call `browser_snapshot` after clicking triggers to confirm the modal accessibility node is active and visible.
 3. **Inspect Network Errors**: If data fails to populate, check if Convex queries are returning errors in the console messages or use `browser_run_code_unsafe` to inspect network response statuses.
+4. **Ensure `aud: "convex"` on Clerk JWTs**: If the agent logs in via `__clerk_ticket` but Convex queries report `Unauthenticated`, verify the Clerk JWT template named `convex` includes `"aud": "convex"`.
+

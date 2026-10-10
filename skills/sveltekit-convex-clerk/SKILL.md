@@ -1006,12 +1006,27 @@ pnpm run format
 pnpm run test:unit
 ```
 
-#### 4. Interactive Beta-Testing & Console Verification (Playwright MCP)
+#### 4. Test User Provisioning & Interactive Beta-Testing (Playwright MCP)
 
-Before finalizing, interactively beta-test the running application using the bundled **Playwright MCP Server** (see [`playwright` skill](../playwright/SKILL.md)):
-1. **Navigate**: Call `browser_navigate("https://<project-name>.localhost")`.
-2. **Inspect Console**: Check tool response to verify zero runtime exceptions, unhandled rejections, or reactivity errors occurred during page mount.
-3. **Exploratory Testing**: Use `browser_snapshot` to inspect accessibility nodes, then `browser_click` and `browser_type` to test buttons, inputs, and dialogs.
+Before finalizing, interactively beta-test both public and authenticated user flows using the bundled **Playwright MCP Server** (see [`playwright` skill](../playwright/SKILL.md)):
+
+##### A. Provision a Test User Account & Sign-In Ticket
+To test protected pages without manual passwords, captcha, or MFA prompts, copy and run the test user provisioner from templates:
+```bash
+# 1. Place the test user script in scripts/
+mkdir -p scripts
+cp templates/create-test-user.ts scripts/create-test-user.ts 2>/dev/null || true
+
+# 2. Run to ensure test user exists and generate a single-use sign-in ticket URL
+node scripts/create-test-user.ts
+```
+The script outputs an instant 1-click sign-in ticket URL:
+`https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz`
+
+##### B. Interactive Testing Flow
+1. **Sign-In / Navigate**: Call `browser_navigate("https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz")`.
+2. **Inspect Console**: Check tool response to verify zero runtime exceptions, unhandled rejections, or reactivity errors occurred during page mount and authentication.
+3. **Exploratory Testing**: Use `browser_snapshot` to inspect accessibility nodes, then `browser_click` and `browser_type` to create items, toggle checkboxes, and test real-time Convex subscriptions.
 4. **On-Demand Screenshot**: Call `browser_take_screenshot(filename: "<artifactDir>/preview.png", fullPage: true)` to capture visual proof.
 
 #### 5. Walkthrough Media (Screenshots & Animated GIFs)
