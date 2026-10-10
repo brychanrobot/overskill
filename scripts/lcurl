@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""
+lcurl - Safe Local Curl Utility (Restricted Strictly to Localhost)
+=================================================================
+A secure, drop-in wrapper around curl that restricts all HTTP/HTTPS requests
+exclusively to localhost and Portless (.localhost) domains. Protects against
+accidental external calls, SSRF, and data exfiltration while supporting all
+standard curl options, streaming, pipes, headers, and automatic Portless CA
+certificate injection.
+"""
+
+import ipaddress
+import os
+import shutil
+import sys
+from pathlib import Path
+from urllib.parse import urlparse
+
+LCURL_VERSION = "1.0.0"
+
+SHORT_OPTS_WITH_ARG = set("AbBcCdDeEFHKmouUwxXyYz")
+LONG_OPTS_WITH_ARG = {
+    "url", "data", "data-raw", "data-binary", "data-ascii", "data-urlencode",
+    "header", "proxy-header", "user", "proxy-user", "output", "connect-timeout",
+    "max-time", "cookie", "cookie-jar", "user-agent", "referer", "upload-file",
+    "form", "form-string", "cacert", "capath", "cert", "cert-type", "key", "pass",
+    "resolve", "connect-to", "write-out", "proxy", "socks5", "socks5-hostname",
+    "interface", "proto", "proto-redir", "proto-default", "retry", "retry-delay",
+    "retry-max-time", "ciphers", "crlfile", "dump-header", "limit-rate",
+    "local-port", "max-filesize", "max-redirs", "oauth2-bearer", "pinnedpubkey",
+    "range", "unix-socket", "abstract-unix-socket", "alt-svc", "hsts",
+}
+
+
+def show_help():
+    print("""lcurl - Safe Local Curl Utility (restricted strictly to localhost)
+
+Usage:
+  ./scripts/lcurl [options] <url> [options...]
+  python3 scripts/lcurl [options] <url> [options...]
+
+Description:
+  lcurl behaves exactly like standard curl, but enforces that all target URLs
+  resolve to loopback or Portless domains:
+    - localhost
+    - *.localhost (e.g. my-app.localhost, api.my-app.localhost)
+    - 127.0.0.0/8 (e.g. 127.0.0.1)
+    - [::1] (IPv6 loopback)
+    - *.local (Portless LAN mode)
+
+  Any attempt to query external domains or non-loopback IPs is blocked.
+  When accessing https://*.localhost, lcurl automatically injects the Portless
+  CA certificate (~/.portless/ca.pem) if present, eliminating TLS warnings.
+
+Examples:
+  # GET request to a local Portless app
+  ./scripts/lcurl https://my-app.localhost
+
+  # GET request to a sub-endpoint with headers
+  ./scripts/lcurl -i https://api.my-app.localhost/health
+
+  # POST JSON to a local service
+  ./scripts/lcurl -X POST -H "Content-Type: application/json" \\
+    -d '{"name": "test"}' https://my-app.localhost/api/items
+
+  # Pipe data from stdin
+  cat payload.json | ./scripts/lcurl -X POST -d @- http://localhost:5173/api
+
+  # Silent status code check
+  ./scripts/lcurl -s -o /dev/null -w "%{http_code}\\n" https://my-app.localhost
+
+For standard curl options, run: curl --help
+""")
+
+
+def is_allowed_host(raw_target: str) -> bool:
+    target = raw_target.strip()
+    if not target:
+        return False
+
+    # Normalize missing scheme for urlparse (e.g. "my-app.localhost/api" or "localhost:3000")
+    if "://" not in target and not target.startswith("//"):
+        target = "http://" + target
+
+    try:
+        parsed = urlparse(target)
+    except Exception:
+        return False
+
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+
+    hostname = hostname.lower()
+
+    # 1. Exact 'localhost' or 'localhost.localdomain'
+    if hostname in ("localhost", "localhost.localdomain"):
+        return True
+
+    # 2. Subdomains of .localhost (Portless named apps & subdomains)
+    if hostname.endswith(".localhost"):
+        return True
+
+    # 3. .local mDNS domains (Portless LAN mode)
+    if hostname.endswith(".local"):
+        return True
+
+    # 4. Loopback IP address (127.0.0.0/8 or ::1)
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_loopback:
+            return True
+    except ValueError:
+        pass
+
+    return False
+
+
+def extract_urls_and_flags(args: list[str]):
+    urls = []
+    has_cacert = False
+    has_insecure = False
+
+    skip_next = False
+    prev_opt = ""
+
+    for arg in args:
+        if skip_next:
+            if prev_opt == "--url":
+                urls.append(arg)
+            skip_next = False
+            prev_opt = ""
+            continue
+
+        if arg == "--cacert" or arg.startswith("--cacert="):
+            has_cacert = True
+        if arg in ("-k", "--insecure"):
+            has_insecure = True
+
+        if arg == "--":
+            continue
+
+        # Long option with '=': --url=... or --data=...
+        if arg.startswith("--"):
+            opt_part = arg[2:]
+            if "=" in opt_part:
+                opt_name, opt_val = opt_part.split("=", 1)
+                if opt_name == "url":
+                    urls.append(opt_val)
+            else:
+                if opt_part in LONG_OPTS_WITH_ARG:
+                    skip_next = True
+                    prev_opt = arg
+            continue
+
+        # Short option: e.g. -X, -H, -d, -s, -i, -sS
+        if arg.startswith("-") and len(arg) > 1 and not arg.startswith("--"):
+            last_char = arg[-1]
+            if last_char in SHORT_OPTS_WITH_ARG:
+                skip_next = True
+                prev_opt = f"-{last_char}"
+            continue
+
+        # Positional argument -> treated as URL
+        urls.append(arg)
+
+    return urls, has_cacert, has_insecure
+
+
+def main():
+    args = sys.argv[1:]
+
+    if not args:
+        curl_bin = os.environ.get("CURL_BIN") or shutil.which("curl") or "/usr/bin/curl"
+        os.execv(curl_bin, [curl_bin])
+
+    if args[0] == "--lcurl-help":
+        show_help()
+        sys.exit(0)
+
+    if args[0] == "--lcurl-version":
+        print(f"lcurl version {LCURL_VERSION} (Python / uv)")
+        curl_bin = os.environ.get("CURL_BIN") or shutil.which("curl") or "/usr/bin/curl"
+        os.execv(curl_bin, [curl_bin, "--version"])
+
+    urls, has_cacert, has_insecure = extract_urls_and_flags(args)
+
+    # Validate all target URLs
+    for url in urls:
+        if not is_allowed_host(url):
+            sys.stderr.write(f"lcurl: error: target '{url}' is not permitted.\n")
+            sys.stderr.write("lcurl is strictly restricted to localhost and *.localhost domains.\n")
+            sys.exit(1)
+
+    # Check if Portless CA injection is required
+    needs_portless_ca = False
+    if not has_cacert and not has_insecure:
+        for u in urls:
+            u_lower = u.lower()
+            if u_lower.startswith("https://") or ".localhost" in u_lower:
+                needs_portless_ca = True
+                break
+
+    portless_ca = Path(os.environ.get("PORTLESS_CA_PATH") or (Path.home() / ".portless" / "ca.pem"))
+    extra_args = []
+    if needs_portless_ca and portless_ca.is_file():
+        extra_args = ["--cacert", str(portless_ca)]
+
+    curl_bin = os.environ.get("CURL_BIN") or shutil.which("curl") or "/usr/bin/curl"
+    if not os.path.isfile(curl_bin) or not os.access(curl_bin, os.X_OK):
+        sys.stderr.write(f"lcurl: error: curl binary not found at '{curl_bin}'.\n")
+        sys.exit(127)
+
+    full_cmd = [curl_bin] + extra_args + args
+    os.execv(curl_bin, full_cmd)
+
+
+if __name__ == "__main__":
+    main()

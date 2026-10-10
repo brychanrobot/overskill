@@ -13,6 +13,7 @@ Every skill in this repository is built following the official Antigravity Custo
 | [`sveltekit-convex-clerk`](./skills/sveltekit-convex-clerk/SKILL.md) | SvelteKit, Vite, TypeScript, Tailwind CSS v4, shadcn-svelte, Biome, Vitest, Playwright, Convex, Clerk, Vercel | Scaffolds, configures, wires, creates a GitHub repo for, tests, captures screenshot/GIF walkthroughs for, and deploys full-stack reactive SvelteKit applications with real-time backend, auth, and accessible UI. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md) |
 | [`clerk`](./skills/clerk/SKILL.md) | Clerk, Authentication, Clerk CLI (`pnpm dlx clerk`), Multi-Framework | Adds Clerk authentication with the Clerk CLI using `pnpm dlx clerk`. Supports accountless instant dev keys, linking existing apps, prebuilt UI controls, and multi-tenancy. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/clerk/SKILL.md) |
 | [`jj`](./skills/jj/SKILL.md) | Jujutsu (jj), Version Control, MCP Tools | Strictly mandates Jujutsu MCP tools, bottom-up squash workflow for stack modifications, story-driven commit descriptions, and rebase conflict resolution. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/jj/SKILL.md) |
+| [`local-curl`](./skills/local-curl/SKILL.md) | Localhost, Portless (`.localhost`), Safe HTTP/S Testing, `curl` | Executes safe, authenticated HTTP/HTTPS requests strictly restricted to localhost and Portless (.localhost) domains using `lcurl` with automatic local CA certificate injection. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/local-curl/SKILL.md) |
 
 ---
 
@@ -136,6 +137,7 @@ overskill/
 ├── README.md                      # Catalog and consumption guide
 ├── skills.json                    # AGY discovery manifest
 ├── scripts/
+│   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection
 │   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/
     └── <skill-name>/
