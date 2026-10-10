@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "pnpm",
+      "args": [
+        "dlx",
+        "--silent",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--ignore-https-errors"
+      ]
+    }
+  }
+}

@@ -14,6 +14,7 @@ Every skill in this repository is built following the official Antigravity Custo
 | [`clerk`](./skills/clerk/SKILL.md) | Clerk, Authentication, Clerk CLI (`pnpm dlx clerk`), Multi-Framework | Adds Clerk authentication with the Clerk CLI using `pnpm dlx clerk`. Supports accountless instant dev keys, linking existing apps, prebuilt UI controls, and multi-tenancy. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/clerk/SKILL.md) |
 | [`jj`](./skills/jj/SKILL.md) | Jujutsu (jj), Version Control, MCP Tools | Strictly mandates Jujutsu MCP tools, bottom-up squash workflow for stack modifications, story-driven commit descriptions, and rebase conflict resolution. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/jj/SKILL.md) |
 | [`local-curl`](./skills/local-curl/SKILL.md) | Localhost, Portless (`.localhost`), Safe HTTP/S Testing, `curl` | Executes safe, authenticated HTTP/HTTPS requests strictly restricted to localhost and Portless (.localhost) domains using `lcurl` with automatic local CA certificate injection. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/local-curl/SKILL.md) |
+| [`playwright`](./skills/playwright/SKILL.md) | Playwright, MCP, Browser Automation, Visual Proof, Console Debugging | Interactively beta-test web applications, inspect live browser console logs and errors, capture high-definition screenshots, and perform manual browser UI automation using the bundled Playwright MCP server. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/playwright/SKILL.md) |
 
 ---
 
@@ -135,6 +136,8 @@ All local development in `overskill` uses [Portless](https://github.com/vercel-l
 ```text
 overskill/
 ├── README.md                      # Catalog and consumption guide
+├── plugin.json                    # Plugin manifest
+├── mcp_config.json                # Bundled Playwright MCP server configuration
 ├── skills.json                    # AGY discovery manifest
 ├── scripts/
 │   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection

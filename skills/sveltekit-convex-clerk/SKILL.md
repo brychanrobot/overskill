@@ -1006,7 +1006,15 @@ pnpm run format
 pnpm run test:unit
 ```
 
-#### 4. Visual Proof & Walkthrough Media (Screenshots & Animated GIFs)
+#### 4. Interactive Beta-Testing & Console Verification (Playwright MCP)
+
+Before finalizing, interactively beta-test the running application using the bundled **Playwright MCP Server** (see [`playwright` skill](../playwright/SKILL.md)):
+1. **Navigate**: Call `browser_navigate("https://<project-name>.localhost")`.
+2. **Inspect Console**: Check tool response to verify zero runtime exceptions, unhandled rejections, or reactivity errors occurred during page mount.
+3. **Exploratory Testing**: Use `browser_snapshot` to inspect accessibility nodes, then `browser_click` and `browser_type` to test buttons, inputs, and dialogs.
+4. **On-Demand Screenshot**: Call `browser_take_screenshot(filename: "<artifactDir>/preview.png", fullPage: true)` to capture visual proof.
+
+#### 5. Walkthrough Media (Screenshots & Animated GIFs)
 
 Non-SWE creators and users benefit immensely from seeing visual proof of their working application. Use the standalone walkthrough recorder `scripts/record-demo.ts` to automatically capture high-definition screenshots and an animated demo GIF:
 
