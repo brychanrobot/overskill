@@ -1006,28 +1006,30 @@ pnpm run format
 pnpm run test:unit
 ```
 
-#### 4. Test User Provisioning & Interactive Beta-Testing (Playwright MCP)
+#### 4. Test User Provisioning & Interactive Beta-Testing (Playwright CLI)
 
-Before finalizing, interactively beta-test both public and authenticated user flows using the bundled **Playwright MCP Server** (see [`playwright` skill](../playwright/SKILL.md)):
+Before finalizing, interactively beta-test both public and authenticated user flows using the bundled **Playwright CLI script** (see [`playwright` skill](../playwright/SKILL.md)):
 
-##### A. Provision a Test User Account & Sign-In Ticket
-To test protected pages without manual passwords, captcha, or MFA prompts, copy and run the test user provisioner from templates:
+##### A. Probe Page Health & Console Output
+Verify zero unhandled runtime exceptions, reactivity warnings, or failed network requests occurred:
 ```bash
-# 1. Place the test user script in scripts/
-mkdir -p scripts
-cp templates/create-test-user.ts scripts/create-test-user.ts 2>/dev/null || true
-
-# 2. Run to ensure test user exists and generate a single-use sign-in ticket URL
-node scripts/create-test-user.ts
+node skills/playwright/scripts/playwright-cli.ts probe https://<project-name>.localhost
 ```
-The script outputs an instant 1-click sign-in ticket URL:
-`https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz`
 
-##### B. Interactive Testing Flow
-1. **Sign-In / Navigate**: Call `browser_navigate("https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz")`.
-2. **Inspect Console**: Check tool response to verify zero runtime exceptions, unhandled rejections, or reactivity errors occurred during page mount and authentication.
-3. **Exploratory Testing**: Use `browser_snapshot` to inspect accessibility nodes, then `browser_click` and `browser_type` to create items, toggle checkboxes, and test real-time Convex subscriptions.
-4. **On-Demand Screenshot**: Call `browser_take_screenshot(filename: "<artifactDir>/preview.png", fullPage: true)` to capture visual proof.
+##### B. Provision a Test User & Authenticate Session
+To test protected pages without manual passwords, captcha, or MFA prompts, run `auth-setup`:
+```bash
+node skills/playwright/scripts/playwright-cli.ts auth-setup --save-session
+```
+*Result*: Provisions `test-agent@example.com`, prints a single-use ticket URL (`__clerk_ticket`), and saves authenticated cookies to `playwright/.clerk/user.json`.
+
+##### C. Capture Authenticated Visual Proof
+Capture high-definition screenshots of protected routes for your walkthrough:
+```bash
+node skills/playwright/scripts/playwright-cli.ts screenshot https://<project-name>.localhost \
+  --auth playwright/.clerk/user.json \
+  -o /home/bryant/.gemini/antigravity/brain/<conversation-id>/dashboard-preview.png
+```
 
 #### 5. Walkthrough Media (Screenshots & Animated GIFs)
 

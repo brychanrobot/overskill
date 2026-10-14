@@ -1,201 +1,201 @@
 ---
 name: playwright
-description: Interactively beta-test web applications, inspect live browser console logs and errors, capture high-definition screenshots, and perform manual browser UI automation using the bundled Playwright MCP server. Use when testing local dev servers, validating UI workflows, capturing visual proof, or debugging client-side runtime errors.
+description: Interactively beta-test web applications, click elements, fill forms, execute compound operations (create, form, assert, smoke), run arbitrary Playwright scripts, inspect live browser console logs and errors, capture high-definition screenshots, and verify Clerk authentication flows using the bundled Playwright CLI script (skills/playwright/scripts/playwright-cli.ts). Use when testing local dev servers, validating UI workflows, capturing visual proof, or debugging client-side runtime errors.
 ---
 
-# Interactive Browser Testing & Verification (`playwright`)
+# Ergonomic Browser Automation & Compound Testing (`playwright`)
 
-This skill defines the standard procedure for agents to perform **manual beta testing**, **visual inspection**, and **runtime error debugging** using the bundled **Playwright MCP server**.
+This skill defines the standard procedure for agents and developers to perform **manual beta testing**, **browser automation**, **compound user flow testing**, **visual inspection**, **console debugging**, and **authenticated verification** using the bundled **Playwright CLI script** (`skills/playwright/scripts/playwright-cli.ts`).
 
-While automated end-to-end test specs (`pnpm test:e2e`) guarantee long-term regression coverage, agents need a fast, interactive loop during development to:
-1. **Verify Initial Render & Hydration**: Ensure components mount cleanly without unhandled Svelte 5 rune errors or React/Vue warnings.
-2. **Inspect Live Browser Console Output**: Detect runtime exceptions, failed API calls, and Convex/Clerk token errors immediately.
-3. **Capture Visual Proof On Demand**: Take full-page and element screenshots and save them directly to conversation artifacts (`walkthrough.md`).
-4. **Perform Interactive Exploratory Testing**: Click buttons, fill forms, toggle modals, and test keyboard accessibility using the accessibility snapshot tree.
-
----
-
-## 1. Bundled MCP Server Architecture
-
-The `overskill` plugin packages the official `@playwright/mcp` server configured for seamless local testing:
-
-- **Headless Mode (`--headless`)**: Runs silently in the background without opening disruptive browser windows.
-- **Portless SSL Bypass (`--ignore-https-errors`)**: Natively trusts self-signed local certificates on `https://*.localhost` domains.
-- **Console Capture**: Automatically intercepts and attaches `console.warn`, `console.error`, and unhandled page exceptions to tool outputs.
-- **Accessibility Snapshots**: Exposes semantic elements via `browser_snapshot` so agents can interact reliably without brittle CSS selectors.
-
-### Available MCP Tools Reference
-
-| MCP Tool | Purpose | Key Arguments |
-| :--- | :--- | :--- |
-| `browser_navigate` | Navigate to any URL | `url` (e.g. `https://my-app.localhost`) |
-| `browser_snapshot` | Inspect semantic structure and obtain element targets | `depth`, `boxes` |
-| `browser_click` | Click a button, link, or input element | `target` (from snapshot), `doubleClick`, `button` |
-| `browser_type` | Type text into an input or textarea | `target`, `text` |
-| `browser_take_screenshot` | Capture high-definition screenshot | `filename`, `fullPage` (boolean), `scale` ("css" \| "device") |
-| `browser_wait_for` | Wait for text to appear/disappear or a time delay | `text`, `textGone`, `time` (seconds) |
-| `browser_select_option`| Choose an option in a `<select>` dropdown | `target`, `values` |
-| `browser_hover` | Hover over an element (e.g. dropdowns, tooltips) | `target` |
-| `browser_tabs` | Manage browser tabs (list, new, close, select) | `action`, `url`, `index` |
-| `browser_run_code_unsafe` | Execute arbitrary custom Playwright snippet | `code` (e.g. `async (page) => { ... }`) |
+Rather than relying on a persistent MCP daemon that can lock browser sessions or require environment restarts, `overskill` provides an ergonomic, standalone CLI utility designed with:
+1. **Smart User-Centric Locators**: Auto-detects buttons, links, inputs, and labels by natural text (e.g. `"Add Item"` or `"Email"`), role, placeholder, or CSS.
+2. **Helpful Failure Diagnostics**: If a selector fails, the CLI scans the live DOM and prints all visible interactive buttons, inputs, and links so the agent can self-correct immediately, while automatically saving a failure screenshot.
+3. **Ergonomic Compound Workflows**: Single-line commands for frequent operations:
+   - `create`: Fills input, submits, asserts real-time render, and captures screenshot.
+   - `form`: Fills multiple fields and submits in one pass.
+   - `assert`: Runs multi-condition page assertions (has-text, visible, count, missing).
+   - `smoke`: Multi-route health probe and screenshot gallery.
+   - `run`: Multi-step action chains (`--click`, `--fill`, `--press`, `--wait-for`, `--screenshot`).
+4. **Full Script Flexibility (`exec`)**: Full access to `(page, context, browser)` for executing arbitrary Playwright code or external `.ts` test scripts.
 
 ---
 
-## 2. Standard Interactive Beta-Testing Workflow
+## 1. Script Location & Execution
 
-Follow this sequence whenever verifying a newly scaffolded app, a newly implemented feature, or a reported frontend bug:
+The CLI is located directly inside this skill:
 
-```mermaid
-flowchart TD
-    Start["1. Start Dev Server (Portless)"] --> Nav["2. browser_navigate(url)"]
-    Nav --> CheckConsole["3. Check Console Messages & Errors"]
-    CheckConsole --> Snap["4. browser_snapshot()"]
-    Snap --> Act["5. Interact: browser_click / browser_type"]
-    Act --> Shoot["6. browser_take_screenshot(filename)"]
-    Shoot --> Artifact["7. Embed Screenshot in Artifact"]
-```
-
-### Step 1: Ensure Local Dev Server Is Running
-Verify the application is being served via Portless:
 ```bash
-# Served over trusted local HTTPS:
-https://<project-name>.localhost
-```
+# Executable via Node:
+node skills/playwright/scripts/playwright-cli.ts <command> [options]
 
-### Step 2: Navigate to the Application
-Use `browser_navigate` to open the local application:
-```json
-{
-  "url": "https://my-app.localhost"
-}
-```
-
-### Step 3: Inspect Console Messages & Page Health
-Inspect the tool execution response from `browser_navigate`:
-- Verify that no **unhandled JavaScript exceptions** or **runtime errors** occurred during page load.
-- Common issues to watch for:
-  - Svelte 5 rune reactivity misuse (e.g. mutating state outside `$state`).
-  - Missing environment variables (e.g. `PUBLIC_CONVEX_URL` or `PUBLIC_CLERK_PUBLISHABLE_KEY`).
-  - Convex WebSocket connection errors.
-  - CSS variable reference failures (e.g. transparent Clerk modals).
-
-### Step 4: Inspect Element Targets (`browser_snapshot`)
-Call `browser_snapshot` to inspect the semantic accessibility tree. The output returns target IDs for all interactive elements:
-```text
-- heading "My Tasks" [level=1]
-- textbox "Add a new item..." [ref=target_input]
-- button "Add" [ref=target_add_btn]
-```
-
-### Step 5: Interact and Test User Flows
-Perform targeted interactions using the element references from the snapshot:
-```json
-// Type into input field
-browser_type({ "target": "target_input", "text": "Buy fresh groceries" })
-
-// Click the submit button
-browser_click({ "target": "target_add_btn" })
-
-// Wait for the new item to render in the real-time list
-browser_wait_for({ "text": "Buy fresh groceries" })
-```
-
-### Step 6: Capture Visual Proof (`browser_take_screenshot`)
-Take a full-page screenshot and save it directly to the active Antigravity conversation artifact directory:
-
-```json
-browser_take_screenshot({
-  "filename": "/home/bryant/.gemini/antigravity/brain/<conversation-id>/task-created.png",
-  "fullPage": true
-})
-```
-
-### Step 7: Embed in Conversation Artifact
-Reference the captured screenshot in your `walkthrough.md` or response:
-```markdown
-### Visual Verification
-![Task Created](file:///home/bryant/.gemini/antigravity/brain/<conversation-id>/task-created.png)
+# Or executed directly:
+./skills/playwright/scripts/playwright-cli.ts <command> [options]
 ```
 
 ---
 
-## 3. Authenticated Testing & Test User Accounts (Clerk)
+## 2. Smart Locators Reference
 
-When beta-testing apps protected by authentication (e.g. Clerk with `<SignedIn>` / `<SignedOut>`), agents need a reliable way to authenticate without being blocked by bot protection (Turnstile/hCaptcha), MFA prompts, or email OTP codes.
+You do not need to guess fragile CSS classes. The CLI automatically resolves:
 
-### Strategy 1: Instant Sign-In Ticket URL (`__clerk_ticket`) — Recommended for Agents
-
-The fastest, zero-friction way for an agent to sign into a local session is via a Clerk **Sign-In Ticket Token**.
-
-1. **Provision Test User & Ticket**:
-   Run the project's test user provisioner script (generated from `templates/create-test-user.ts`):
-   ```bash
-   node scripts/create-test-user.ts
-   ```
-   *Under the hood, this script uses `CLERK_SECRET_KEY` to:*
-   - Check if `test-agent@example.com` exists in Clerk; creates it if missing.
-   - Calls Clerk's Backend API `POST /v1/sign_in_tokens` to generate a 24-hour single-use ticket token.
-   - Outputs the local ticket URL:
-     `https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz`
-
-2. **Authenticate the Headless Browser**:
-   The agent calls `browser_navigate` directly with the ticket URL:
-   ```json
-   browser_navigate({
-     "url": "https://<project-name>.localhost/sign-in?__clerk_ticket=tok_xyz"
-   })
-   ```
-   *Result*: Clerk frontend automatically detects `__clerk_ticket`, completes the authentication handshake, sets session cookies, and redirects into the app as `test-agent@example.com`. The agent can now test all protected routes, Convex queries, and mutations!
-
----
-
-### Strategy 2: Pre-Captured Session State (`storageState`) — For Repeated Runs & E2E
-
-To avoid repeating the login flow across multiple test runs:
-
-1. **Generate Session State**:
-   ```bash
-   node scripts/create-test-user.ts --save-session
-   ```
-   This automatically visits the ticket URL headlessly and exports authenticated cookies and localStorage to `playwright/.clerk/user.json`.
-
-2. **Use in Automated E2E Specs (`playwright.config.ts`)**:
-   ```ts
-   import { defineConfig } from '@playwright/test';
-
-   export default defineConfig({
-     use: {
-       baseURL: process.env.PORTLESS_URL || 'https://my-app.localhost',
-       storageState: 'playwright/.clerk/user.json', // Starts every test pre-authenticated!
-     },
-   });
-   ```
-
----
-
-### Strategy 3: Clerk Built-In Test Mode (`424242`)
-
-For testing manual registration/login UI forms directly:
-- **Test Email Pattern**: Use any address ending with `+clerk_test@example.com` (e.g. `jane+clerk_test@example.com`).
-- **Fixed Verification Code**: Clerk development instances accept `424242` as the verification code for all OTP challenges, eliminating the need to check real mailboxes.
-
----
-
-## 4. When to Use Playwright MCP vs Automated Playwright Specs
-
-| Capability | Playwright MCP (Interactive) | Automated Specs (`pnpm test:e2e`) |
+| Target String | Resolution Strategy | Example |
 | :--- | :--- | :--- |
-| **Primary Goal** | Exploratory manual beta testing & visual proof | Regression prevention & continuous integration |
-| **Execution Style** | Step-by-step tool calls driven by the agent | Batch execution running headless in CLI |
-| **Output** | Live tool responses, immediate screenshots, console inspection | Pass/fail test reports, CI artifacts |
-| **Ideal Timing** | During development, immediately after coding | Before git commits, pull requests, and releases |
+| **Plain Text** | Matches button, link, label, or text with that name | `"Add Task"`, `"Sign In"` |
+| `role=<role>[name='...']` | Accessible role locator | `"role=button[name='Submit']"` |
+| `placeholder='...'` | Accessible input placeholder | `"placeholder='Add a new item...'"` |
+| `label='...'` | Associated form `<label>` text | `"label='Email Address'"` |
+| `testid='...'` | Playwright test ID attribute | `"testid='task-item'"` |
+| `text='...'` | Substring text match | `"text='Congratulations'"` |
+| **CSS Selector** | Standard DOM selector | `"button.primary"`, `"#submit"` |
+
+> [!TIP]
+> **Self-Healing Locator Diagnostics**:
+> If a button or input cannot be found, the CLI will output:
+> ```text
+> ❌ Action Failed: Could not perform click element 'Add Task'
+> 💡 Visible interactive elements on page right now:
+>    • Button: "Add"
+>    • Button: "Clear Completed"
+>    • Input: placeholder="Add a new item..."
+>    • Link: "Sign In"
+> 📸 Saved failure screenshot: .playwright/failures/failure-1718000000.png
+> ```
+> This allows the agent to immediately spot the correct element name without guessing.
 
 ---
 
-## 5. Best Practices & Troubleshooting
+## 3. Ergonomic Compound Commands
 
-1. **Always Use `fullPage: true` for Layout Reviews**: When capturing page overviews, set `fullPage: true` to inspect footer alignments, full list rendering, and overflow scrollbars.
-2. **Check for Hidden Modals**: When testing authentication (Clerk) or dialogs (shadcn), call `browser_snapshot` after clicking triggers to confirm the modal accessibility node is active and visible.
-3. **Inspect Network Errors**: If data fails to populate, check if Convex queries are returning errors in the console messages or use `browser_run_code_unsafe` to inspect network response statuses.
-4. **Ensure `aud: "convex"` on Clerk JWTs**: If the agent logs in via `__clerk_ticket` but Convex queries report `Unauthenticated`, verify the Clerk JWT template named `convex` includes `"aud": "convex"`.
+### A. Compound `create` (Add Item + Verify Real-Time Sync)
 
+Fills an input, submits, waits for the new item to appear (confirming Convex WebSocket reactivity), and saves visual proof in a single command:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts create https://my-app.localhost \
+  --input "Add a new item..." \
+  --value "Buy fresh sourdough" \
+  --submit "Add" \
+  --expect "Buy fresh sourdough" \
+  -o /home/bryant/.gemini/antigravity/brain/<conversation-id>/task-created.png
+```
+
+---
+
+### B. Compound `form` (Multi-Field Submission)
+
+Fill multiple inputs and submit in one pass:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts form https://my-app.localhost/sign-in \
+  --fields "email=test-agent@example.com, password=TestPassword123!" \
+  --submit "Sign In" \
+  --expect "Dashboard" \
+  -o /home/bryant/.gemini/antigravity/brain/<conversation-id>/logged-in.png
+```
+
+---
+
+### C. Compound `assert` (Multi-Condition Page Checks)
+
+Assert that required elements and text are present, and errors are absent:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts assert https://my-app.localhost \
+  --has-text "My Recipe Box" \
+  --missing-text "500 Internal Error" \
+  --visible "button:has-text('Add')" \
+  --count "ul > li, 3"
+```
+
+Exits with code `0` if all assertions pass, or code `1` with a failure screenshot if any condition fails.
+
+---
+
+### D. Compound `smoke` (Multi-Route Health & Gallery)
+
+Verify multiple routes across the application in one command:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts smoke https://my-app.localhost \
+  --routes "/, /sign-in, /pricing" \
+  --out-dir .playwright/smoke
+```
+
+---
+
+### E. Chained Action Sequences (`run`)
+
+Chain arbitrary steps in a single browser session:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts run \
+  --goto https://my-app.localhost \
+  --click "button:has-text('Add Item')" \
+  --fill "input[placeholder='New item...'],Buy oat milk" \
+  --press Enter \
+  --assert-text "Buy oat milk" \
+  --screenshot /home/bryant/.gemini/antigravity/brain/<conversation-id>/item-added.png
+```
+
+---
+
+### F. Arbitrary Playwright Code Execution (`exec`)
+
+Execute raw Playwright code when advanced logic (loops, canvas, custom evaluations) is required:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts exec "
+  await page.goto('https://my-app.localhost');
+  const items = page.locator('ul > li');
+  console.log('Count:', await items.count());
+
+  await page.getByRole('button', { name: 'Add' }).click();
+  await page.getByPlaceholder('Add a new item...').fill('Learn Svelte 5');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('text=Learn Svelte 5');
+  await page.screenshot({ path: 'preview.png', fullPage: true });
+"
+```
+
+---
+
+## 4. Authenticated Testing & Test User Accounts (Clerk)
+
+When beta-testing pages protected by authentication (e.g. `<SignedIn>` / `<SignedOut>`), bypass bot protection, MFA, and OTP emails using `auth-setup`:
+
+```bash
+node skills/playwright/scripts/playwright-cli.ts auth-setup --save-session
+```
+
+*Under the hood, this command:*
+1. Reads `CLERK_SECRET_KEY` from `.env.local`.
+2. Checks if `test-agent@example.com` exists in Clerk; creates it if missing.
+3. Generates a 24-hour single-use sign-in ticket token via `POST /v1/sign_in_tokens`.
+4. Launches headless Chromium to consume the ticket and saves the authenticated session to `playwright/.clerk/user.json` (`storageState`).
+
+Now run any compound command pre-authenticated using `--auth`:
+```bash
+node skills/playwright/scripts/playwright-cli.ts create https://my-app.localhost/dashboard \
+  --auth playwright/.clerk/user.json \
+  --input "Add a new item..." \
+  --value "Protected Task" \
+  --submit "Add" \
+  -o /home/bryant/.gemini/antigravity/brain/<conversation-id>/protected-task.png
+```
+
+---
+
+## 5. Summary of Commands
+
+| Command | Best Used For |
+| :--- | :--- |
+| `create <url>` | Adding items, real-time sync checks, creating records |
+| `form <url>` | Multi-input submissions, registration, profile forms |
+| `assert <url>` | Multi-condition assertions, smoke gates |
+| `smoke <url>` | Route crawling, screenshot gallery generation |
+| `run [flags...]` | Custom multi-step interaction chains |
+| `exec <code>` | Custom Playwright scripts and complex page interactions |
+| `probe <url>` | Quick console health and runtime exception check |
+| `screenshot <url>` | On-demand full-page visual proof |
+| `snapshot <url>` | Text-based accessibility tree inspection |
+| `auth-setup` | Clerk test user generation & ticket token sign-in |
