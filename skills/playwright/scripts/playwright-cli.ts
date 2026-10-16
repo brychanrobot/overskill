@@ -17,6 +17,7 @@
 
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
 // ANSI colors for clean terminal output
 const BOLD = '\x1b[1m';
@@ -31,6 +32,25 @@ const RESET = '\x1b[0m';
  * Dynamically resolves and loads Playwright from project or parent node_modules.
  */
 async function loadPlaywright() {
+  const reqDirs = [
+    process.cwd(),
+    path.resolve(process.cwd(), 'packages/viewer'),
+    path.resolve(process.cwd(), 'packages/web'),
+    path.resolve(process.cwd(), 'apps/web'),
+    path.resolve(process.cwd(), 'frontend'),
+  ];
+  for (const dir of reqDirs) {
+    try {
+      const req = createRequire(path.join(dir, 'package.json'));
+      for (const name of ['@playwright/test', 'playwright']) {
+        try {
+          const mod = req(name);
+          if (mod.chromium) return mod;
+        } catch {}
+      }
+    } catch {}
+  }
+
   const candidates = [
     '@playwright/test',
     'playwright',
@@ -701,7 +721,16 @@ async function runChained(actions: ActionStep[], globalOptions: Record<string, s
   }
 
   const authPath = (globalOptions.auth as string) || '';
-  const session = await createSession({ authPath });
+  let width = 1280;
+  let height = 800;
+  if (typeof globalOptions.viewport === 'string' && globalOptions.viewport.includes('x')) {
+    const [w, h] = globalOptions.viewport.split('x').map(Number);
+    if (w && h) {
+      width = w;
+      height = h;
+    }
+  }
+  const session = await createSession({ authPath, viewport: { width, height } });
   const { browser, page, consoleMessages, pageErrors } = session;
 
   console.log(`\n${BOLD}Playwright Runner: Executing ${actions.length} action(s)...${RESET}`);
@@ -795,7 +824,8 @@ async function runChained(actions: ActionStep[], globalOptions: Record<string, s
             const outPath = path.resolve(step.value || 'preview.png');
             const parentDir = path.dirname(outPath);
             if (!existsSync(parentDir)) mkdirSync(parentDir, { recursive: true });
-            await page.screenshot({ path: outPath, fullPage: true });
+            const fullPage = !globalOptions['no-full-page'] && globalOptions['full-page'] !== false && globalOptions['full-page'] !== 'false' && !globalOptions.viewport;
+            await page.screenshot({ path: outPath, fullPage });
             console.log(`${stepNum} ${GREEN}📸 Screenshot saved:${RESET} ${CYAN}${outPath}${RESET}`);
             break;
           }
@@ -844,7 +874,16 @@ async function runExec(codeOrFile: string, globalOptions: Record<string, string 
     codeToRun = readFileSync(resolvedFile, 'utf-8');
   }
 
-  const session = await createSession({ authPath });
+  let width = 1280;
+  let height = 800;
+  if (typeof globalOptions.viewport === 'string' && globalOptions.viewport.includes('x')) {
+    const [w, h] = globalOptions.viewport.split('x').map(Number);
+    if (w && h) {
+      width = w;
+      height = h;
+    }
+  }
+  const session = await createSession({ authPath, viewport: { width, height } });
   const { browser, context, page, consoleMessages, pageErrors } = session;
 
   console.log(`\n${BOLD}Playwright Exec:${RESET} Running custom Playwright automation...`);
@@ -1031,7 +1070,7 @@ async function runProbe(url: string, args: Record<string, string | boolean>) {
 async function runScreenshot(url: string, args: Record<string, string | boolean>) {
   const outputPath = (args.output as string) || (args.o as string) || 'preview.png';
   const authPath = (args.auth as string) || '';
-  const fullPage = args['full-page'] !== false;
+  const fullPage = !args['no-full-page'] && args['full-page'] !== false && args['full-page'] !== 'false' && !args.viewport;
   const waitSeconds = Number(args.wait || 0);
   const selector = (args.selector as string) || '';
 
