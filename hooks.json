@@ -1,0 +1,16 @@
+{
+  "rewrite-pnpx": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/rewrite-pnpx.ts",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
