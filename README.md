@@ -142,6 +142,7 @@ overskill/
 ├── package.json                   # Project scripts and dev tools
 ├── skills.json                    # AGY discovery manifest
 ├── scripts/
+│   ├── cloudflare-domain.ts       # Automated Cloudflare zone and domain extractor from cert.pem
 │   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection
 │   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/

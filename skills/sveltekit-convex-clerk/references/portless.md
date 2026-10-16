@@ -347,7 +347,23 @@ cloudflared tunnel login
 ```
 This opens your browser. Select your domain (`<your-domain.com>`) to authorize. Cloudflare will download an origin certificate to `~/.cloudflared/cert.pem`.
 
-#### Step 3: Create a Named Tunnel
+#### Step 3: Automatically Extract Your Domain Name (`scripts/cloudflare-domain.ts`)
+Instead of asking users to look up or re-type their domain name, run the bundled extractor to query Cloudflare automatically:
+
+```bash
+# Print active domain name:
+node scripts/cloudflare-domain.ts
+# -> example.com
+
+# Or set PORTLESS_TLD in Fish shell:
+set -Ux PORTLESS_TLD (node scripts/cloudflare-domain.ts --tld)
+
+# Or in Bash / Zsh:
+export PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)
+```
+*How it works*: `scripts/cloudflare-domain.ts` decodes the token from `~/.cloudflared/cert.pem`, retrieves the `zoneID` and `apiToken`, and queries Cloudflare's `/client/v4/zones` API endpoint to return the exact zone name.
+
+#### Step 4: Create a Named Tunnel
 Create a persistent tunnel for your development workstation:
 
 ```bash
@@ -355,15 +371,21 @@ cloudflared tunnel create dev-tunnel
 ```
 This generates a unique **Tunnel ID** (UUID) and creates credentials at `~/.cloudflared/<tunnel-uuid>.json`.
 
-#### Step 4: Configure Wildcard DNS Routing
+#### Step 5: Configure Wildcard DNS Routing
 Route all subdomains under your custom domain directly through your tunnel:
 
 ```bash
-cloudflared tunnel route dns dev-tunnel "*.<your-domain.com>"
+# In Bash/Zsh:
+DOMAIN=$(node scripts/cloudflare-domain.ts)
+cloudflared tunnel route dns dev-tunnel "*.$DOMAIN"
+
+# In Fish:
+set DOMAIN (node scripts/cloudflare-domain.ts)
+cloudflared tunnel route dns dev-tunnel "*.$DOMAIN"
 ```
 *(Alternatively, in the Cloudflare Dashboard under DNS Records for `<your-domain.com>`, add a CNAME record: Name: `*`, Target: `<tunnel-uuid>.cfargotunnel.com`, Proxy Status: Proxied).*
 
-#### Step 5: Configure `~/.cloudflared/config.yml`
+#### Step 6: Configure `~/.cloudflared/config.yml`
 Create or edit `~/.cloudflared/config.yml` to route incoming traffic directly to Portless's local HTTPS proxy on port 443:
 
 ```yaml
@@ -391,32 +413,60 @@ ingress:
 >   caPool: /home/<username>/.portless/ca.pem
 > ```
 
-#### Step 6: Configure Portless for Your Custom Domain (`PORTLESS_TLD`)
+#### Step 7: Configure Portless for Your Custom Domain (`PORTLESS_TLD`)
 Inform Portless that `<your-domain.com>` is an active top-level domain alongside `.localhost`:
 
-Add to your shell profile (`~/.bashrc`, `~/.zshrc`) or user environment:
+In **Fish shell** (`~/.config/fish/config.fish` or universal variable):
+```fish
+set -Ux PORTLESS_TLD (node scripts/cloudflare-domain.ts --tld)
+```
+
+In **Bash / Zsh** (`~/.bashrc`, `~/.zshrc`):
 ```bash
-export PORTLESS_TLD="localhost,<your-domain.com>"
+export PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)
 ```
 
 Or when running the Portless proxy daemon:
 ```bash
-portless proxy start --tld localhost --tld <your-domain.com>
+portless proxy start --tld localhost --tld $(node scripts/cloudflare-domain.ts)
 ```
 
-#### Step 7: Run `cloudflared` as a Background Service
-To keep the tunnel running across system restarts:
+#### Step 8: Run `cloudflared` as a Background Service
+To keep the tunnel running across system restarts without terminal windows:
 
+##### Option A: User Service via Systemd (Zero Sudo Required - Recommended)
+Create `~/.config/systemd/user/cloudflared.service`:
+```ini
+[Unit]
+Description=Cloudflare Tunnel (User Service)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/<username>/.local/share/mise/installs/cloudflared/latest/cloudflared tunnel run dev-tunnel
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+Enable and start immediately:
 ```bash
-# Option 1: System-wide service (prompts for sudo)
+systemctl --user daemon-reload
+systemctl --user enable --now cloudflared
+```
+
+##### Option B: System-wide Service (Prompts for Sudo)
+```bash
 sudo cloudflared service install
 sudo systemctl enable --now cloudflared
-
-# Option 2: Run directly or in a user systemd service
-cloudflared tunnel run dev-tunnel
 ```
 
-#### Step 8: Ensure Vite Allows the Custom Domain
+#### Step 9: Ensure Vite Allows the Custom Domain
 In `vite.config.ts`, verify that `server.allowedHosts` is set to `true`:
 
 ```typescript
@@ -429,7 +479,7 @@ export default defineConfig({
 });
 ```
 
-#### Step 9 (Recommended): Cloudflare Zero Trust Access Protection
+#### Step 10 (Recommended): Cloudflare Zero Trust Access Protection
 If you do not want your in-development applications exposed publicly to the open internet:
 1. Navigate to **Cloudflare One / Zero Trust Dashboard** -> **Access** -> **Applications**.
 2. Click **Add an application** -> **Self-hosted**.

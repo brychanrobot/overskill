@@ -1077,11 +1077,19 @@ When testing on physical mobile devices (iOS/Android), verifying webhook deliver
 > *3. **Localhost Only** (`https://<project-name>.localhost` loopback via RFC 6761)*"
 
 ##### B. If Cloudflare Tunnel with Custom Domain is Selected
-1. Obtain the user's custom domain (e.g. `yourdomain.com`). *(Strict rule: Never commit the user's real domain into shared repository files or skills).*
-2. Configure Portless with `export PORTLESS_TLD="localhost,<your-domain.com>"` in your shell profile or user environment.
-3. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#9-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
-4. Start the tunnel daemon (`cloudflared tunnel run dev-tunnel` or system service).
-5. The application is immediately accessible at `https://<project-name>.<your-domain.com>` from any smartphone, tablet, or browser on the internet without VPN clients!
+1. **Automated Domain Extraction**: If the user has authenticated with Cloudflare (`cloudflared tunnel login`), do **not** force them to look up or type their domain manually. Automatically extract the active domain from `~/.cloudflared/cert.pem` using the bundled script:
+   ```bash
+   # In Bash / Zsh:
+   DOMAIN=$(node scripts/cloudflare-domain.ts)
+
+   # In Fish:
+   set DOMAIN (node scripts/cloudflare-domain.ts)
+   ```
+2. Configure Portless with `export PORTLESS_TLD="localhost,$DOMAIN"` (or in Fish: `set -Ux PORTLESS_TLD (node scripts/cloudflare-domain.ts --tld)`).
+3. Ensure the wildcard DNS route is configured (`cloudflared tunnel route dns dev-tunnel "*.$DOMAIN"`).
+4. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#9-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
+5. Start or enable the background user service (`systemctl --user enable --now cloudflared` or `cloudflared tunnel run dev-tunnel`).
+6. The application is immediately accessible at `https://<project-name>.<your-domain>` from any smartphone, tablet, or browser on the internet without VPN clients!
 
 ##### C. If Tailscale Sharing is Selected
 1. Run the application using Portless's built-in Tailscale flag:
