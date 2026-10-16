@@ -427,32 +427,23 @@ In **Bash / Zsh** (`~/.bashrc`, `~/.zshrc`):
 export PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)
 ```
 
-##### B. Restarting or Updating the Portless Proxy
-To update the active Portless proxy daemon so it binds port 443 with your custom domain:
+##### B. Reconfiguring the Persisted Portless Service (Recommended)
+To persist the custom domain across system reboots so the Portless system service binds port 443 with both `.localhost` and your custom domain on OS startup, instruct the user to run:
 
 ```bash
-# In Bash/Zsh:
-portless proxy stop
-portless proxy start --https --tld localhost --tld $(node scripts/cloudflare-domain.ts)
-
-# In Fish:
-portless proxy stop
-portless proxy start --https --tld localhost --tld (node scripts/cloudflare-domain.ts)
-```
-
-Or to persist the custom domain across system reboots in the system startup service:
-```bash
-# In Bash/Zsh:
+# In Bash / Zsh:
 portless service install --tld localhost --tld $(node scripts/cloudflare-domain.ts)
 
 # In Fish:
 portless service install --tld localhost --tld (node scripts/cloudflare-domain.ts)
 ```
 
+*(Alternatively, if running without systemd services as an ad-hoc terminal daemon: `portless proxy stop && portless proxy start --https --tld localhost --tld <domain>`).*
+
 > [!IMPORTANT]
 > **User Terminal Execution (Never use `sudo` directly)**:
-> The agent MUST instruct the user to run these Portless proxy/service commands in their own terminal without `sudo`.
-> - **Do NOT prefix with `sudo`**: Portless internally handles privilege elevation and will prompt for the administrator password interactively when binding port 443 or installing systemd services.
+> The agent MUST instruct the user to run `portless service install` in their own interactive terminal without `sudo`.
+> - **Do NOT prefix with `sudo`**: Portless internally handles privilege elevation and will prompt for the administrator password interactively in the user's terminal when updating `/etc/systemd/system/portless.service`.
 > - **Agent Non-Interactive Block**: Agents cannot run `sudo` or commands requiring interactive elevation because they lack an interactive TTY and will block indefinitely on sudo password prompts.
 
 #### Step 8: Run `cloudflared` as a Background Service
