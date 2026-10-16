@@ -413,9 +413,10 @@ ingress:
 >   caPool: /home/<username>/.portless/ca.pem
 > ```
 
-#### Step 7: Configure Portless for Your Custom Domain (`PORTLESS_TLD`)
+#### Step 7: Configure Portless for Your Custom Domain (`PORTLESS_TLD` & Proxy Daemon)
 Inform Portless that `<your-domain.com>` is an active top-level domain alongside `.localhost`:
 
+##### A. Environment Variable
 In **Fish shell** (`~/.config/fish/config.fish` or universal variable):
 ```fish
 set -Ux PORTLESS_TLD (node scripts/cloudflare-domain.ts --tld)
@@ -426,10 +427,33 @@ In **Bash / Zsh** (`~/.bashrc`, `~/.zshrc`):
 export PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)
 ```
 
-Or when running the Portless proxy daemon:
+##### B. Restarting or Updating the Portless Proxy
+To update the active Portless proxy daemon so it binds port 443 with your custom domain:
+
 ```bash
-portless proxy start --tld localhost --tld $(node scripts/cloudflare-domain.ts)
+# In Bash/Zsh:
+portless proxy stop
+portless proxy start --https --tld localhost --tld $(node scripts/cloudflare-domain.ts)
+
+# In Fish:
+portless proxy stop
+portless proxy start --https --tld localhost --tld (node scripts/cloudflare-domain.ts)
 ```
+
+Or to persist the custom domain across system reboots in the system startup service:
+```bash
+# In Bash/Zsh:
+portless service install --tld localhost --tld $(node scripts/cloudflare-domain.ts)
+
+# In Fish:
+portless service install --tld localhost --tld (node scripts/cloudflare-domain.ts)
+```
+
+> [!IMPORTANT]
+> **User Terminal Execution (Never use `sudo` directly)**:
+> The agent MUST instruct the user to run these Portless proxy/service commands in their own terminal without `sudo`.
+> - **Do NOT prefix with `sudo`**: Portless internally handles privilege elevation and will prompt for the administrator password interactively when binding port 443 or installing systemd services.
+> - **Agent Non-Interactive Block**: Agents cannot run `sudo` or commands requiring interactive elevation because they lack an interactive TTY and will block indefinitely on sudo password prompts.
 
 #### Step 8: Run `cloudflared` as a Background Service
 To keep the tunnel running across system restarts without terminal windows:

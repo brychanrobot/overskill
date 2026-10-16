@@ -1086,6 +1086,20 @@ When testing on physical mobile devices (iOS/Android), verifying webhook deliver
    set DOMAIN (node scripts/cloudflare-domain.ts)
    ```
 2. Configure Portless with `export PORTLESS_TLD="localhost,$DOMAIN"` (or in Fish: `set -Ux PORTLESS_TLD (node scripts/cloudflare-domain.ts --tld)`).
+   - **Instruct the User to Update Portless (Without `sudo`)**:
+     Instruct the user to run the Portless command directly in their interactive terminal without `sudo`:
+     ```bash
+     # In Bash/Zsh:
+     portless proxy stop
+     portless proxy start --https --tld localhost --tld $(node scripts/cloudflare-domain.ts)
+
+     # In Fish:
+     portless proxy stop
+     portless proxy start --https --tld localhost --tld (node scripts/cloudflare-domain.ts)
+     ```
+     *(Or to persist across system reboots: `portless service install --tld localhost --tld (node scripts/cloudflare-domain.ts)`).*
+     > [!IMPORTANT]
+     > Do **NOT** attempt to run `sudo portless ...` or `portless proxy start` from the agent. Portless handles elevation internally and prompts for the user's password interactively. Agents lack an interactive TTY and will block indefinitely on sudo password prompts.
 3. Ensure the wildcard DNS route is configured (`cloudflared tunnel route dns dev-tunnel "*.$DOMAIN"`).
 4. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#9-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
 5. Start or enable the background user service (`systemctl --user enable --now cloudflared` or `cloudflared tunnel run dev-tunnel`).
