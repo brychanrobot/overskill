@@ -53,7 +53,7 @@ curl -sSL https://raw.githubusercontent.com/brychanrobot/overskill/main/scripts/
 ### Bundled Lifecycle Hooks
 
 `overskill` includes built-in lifecycle hooks configured in `hooks.json`:
-- **`rewrite-pnpx` (`PreToolUse`)**: Intercepts `run_command` tool calls and automatically rewrites executable invocations of `pnpx` to `pnpm dlx` (preserving non-command string literals, arguments, and commit messages while properly handling environment assignments, chains, subshells, and wrappers).
+- **`rewrite-pnpx` (`PreToolUse`)**: Intercepts `run_command` tool calls and automatically rewrites executable invocations of `npx` and `pnpx` to `pnpm dlx` (preserving non-command string literals, arguments, and commit messages while properly handling environment assignments, chains, subshells, and wrappers).
 
 ---
 
@@ -144,13 +144,13 @@ All local development in `overskill` uses [Portless](https://github.com/vercel-l
 overskill/
 ├── README.md                      # Catalog and consumption guide
 ├── plugin.json                    # Plugin manifest
-├── hooks.json                     # Lifecycle hooks (auto-rewrites pnpx to pnpm dlx)
+├── hooks.json                     # Lifecycle hooks (auto-rewrites npx & pnpx to pnpm dlx)
 ├── package.json                   # Project scripts and dev tools
 ├── skills.json                    # AGY discovery manifest
 ├── scripts/
 │   ├── cloudflare-domain.ts       # Automated Cloudflare zone and domain extractor from cert.pem
 │   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection
-│   ├── rewrite-pnpx.ts            # PreToolUse hook script rewriting pnpx to pnpm dlx
+│   ├── rewrite-pnpx.ts            # PreToolUse hook script rewriting npx & pnpx to pnpm dlx
 │   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/
     ├── playwright/

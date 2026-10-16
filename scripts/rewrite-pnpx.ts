@@ -272,8 +272,8 @@ export function rewriteCommandLine(input: string): string {
       continue;
     }
 
-    // Check if this token is `pnpx` in command position
-    if (expectingCommand && (strippedWord === 'pnpx')) {
+    // Check if this token is `pnpx` or `npx` in command position
+    if (expectingCommand && (strippedWord === 'pnpx' || strippedWord === 'npx')) {
       out += 'pnpm dlx';
       expectingCommand = false;
       inWrapper = false;
@@ -506,9 +506,64 @@ function runSelfTests() {
       expected: 'pnpx-cli run'
     },
     {
-      name: 'PRESERVE: npx command',
+      name: 'standalone npx command',
       input: 'npx svelte-add tailwindcss',
-      expected: 'npx svelte-add tailwindcss'
+      expected: 'pnpm dlx svelte-add tailwindcss'
+    },
+    {
+      name: 'npx with scoped package',
+      input: 'npx @clerk/backend',
+      expected: 'pnpm dlx @clerk/backend'
+    },
+    {
+      name: 'npx in chain with pnpm',
+      input: 'pnpm install && npx convex dev',
+      expected: 'pnpm install && pnpm dlx convex dev'
+    },
+    {
+      name: 'npx in subshell',
+      input: '(npx foo)',
+      expected: '(pnpm dlx foo)'
+    },
+    {
+      name: 'npx inside sh -c wrapper',
+      input: 'sh -c "npx sv create app"',
+      expected: 'sh -c "pnpm dlx sv create app"'
+    },
+    {
+      name: 'just npx alone',
+      input: 'npx',
+      expected: 'pnpm dlx'
+    },
+    {
+      name: 'PRESERVE: git commit message mentioning npx',
+      input: 'git commit -m "rewrite npx to pnpm dlx"',
+      expected: 'git commit -m "rewrite npx to pnpm dlx"'
+    },
+    {
+      name: 'PRESERVE: grep argument for npx',
+      input: 'grep "npx" package.json',
+      expected: 'grep "npx" package.json'
+    },
+    {
+      name: 'PRESERVE: echo argument for npx',
+      input: 'echo "install via npx"',
+      expected: 'echo "install via npx"'
+    },
+    {
+      name: 'PRESERVE: which npx query',
+      input: 'which npx',
+      expected: 'which npx'
+    },
+    {
+      name: 'PRESERVE: package or command with npx suffix',
+      input: 'foo-npx bar',
+      expected: 'foo-npx bar'
+    },
+    {
+      name: 'PRESERVE: package or command with npx prefix',
+      input: 'npx-cli run',
+      expected: 'npx-cli run'
     },
     {
       name: 'PRESERVE: command already using pnpm dlx',
@@ -558,7 +613,7 @@ function main() {
   const args = payload?.toolCall?.args;
   const originalCmd = args?.CommandLine ?? args?.commandLine ?? args?.command_line;
 
-  if (typeof originalCmd !== 'string' || !originalCmd.includes('pnpx')) {
+  if (typeof originalCmd !== 'string' || (!originalCmd.includes('pnpx') && !originalCmd.includes('npx'))) {
     console.log(JSON.stringify({ decision: 'allow' }));
     return;
   }
