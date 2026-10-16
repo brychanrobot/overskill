@@ -282,3 +282,186 @@ No configuration changes are needed; every worktree runs concurrently without po
 | **Start Proxy (Foreground)** | `portless proxy start --foreground` | Runs proxy in foreground for real-time traffic debugging. |
 | **Stop Proxy Daemon** | `portless proxy stop` | Stops the background proxy daemon. |
 | **Bypass Portless** | `PORTLESS=0 pnpm dev` | Runs the dev command directly on standard localhost. |
+
+---
+
+## 9. Remote & Multi-Device Access: Cloudflare Tunnels vs. Tailscale
+
+While `.localhost` domains natively resolve on the local machine via RFC 6761, testing applications on mobile devices (smartphones, tablets), sharing preview builds with collaborators, or receiving external webhook deliveries (e.g. Clerk, Stripe, GitHub webhooks) requires remote network exposure.
+
+`overskill` provides two primary strategies for remote and multi-device access, plus standard local-only execution:
+1. **Cloudflare Tunnel with a Custom Domain** (Recommended for seamless multi-device testing without VPN clients, clean vanity subdomains, and public webhook delivery).
+2. **Tailscale Sharing** (Recommended for private tailnet access restricted to authenticated devices).
+3. **Localhost Only (`.localhost`)** (Default for isolated, single-machine development).
+
+> [!IMPORTANT]
+> **Domain Privacy Rule**: Never commit or hardcode private custom domains into public repositories, shared agent skills, or git-tracked project configs. Always use generic placeholders (`<your-domain.com>`) in documentation and keep your actual domain configured via local environment variables (`PORTLESS_TLD`) and local daemon settings.
+
+### Decision Matrix: Choosing Your Remote Access Strategy
+
+| Feature | Cloudflare Tunnels (`cloudflared`) | Tailscale (`--tailscale` / `--funnel`) | Localhost (`.localhost`) |
+| :--- | :--- | :--- | :--- |
+| **Domain Format** | `https://<project>.<your-domain.com>` | `https://<node>.<tailnet>.ts.net:<port>` | `https://<project>.localhost` |
+| **Client Requirement** | Zero client software needed on testing devices (works on iOS, Android, laptops) | Requires Tailscale client installed on every testing device (unless using `--funnel`) | Local machine only |
+| **Subdomain Routing** | Automatic wildcard routing (`*.<your-domain.com>`) via Portless | Dedicated port mappings per app (`443`, `8443`, `8444`) | Automatic wildcard routing (`*.localhost`) |
+| **Webhooks Support** | Native public HTTPS (receives Clerk, Stripe, GitHub webhooks seamlessly) | Supported only with `--funnel` (standard `--tailscale` is private only) | Requires local mock/relay |
+| **Access Control** | Cloudflare Zero Trust (Email One-Time PIN, Google/GitHub SSO, IP allowlist) | Tailscale tailnet ACLs & device authorization | Local loopback only |
+| **Best For** | Multi-device testing, client previews, external webhooks, vanity URLs | Private, restricted team access within a corporate or personal VPN | Standard rapid daily development |
+
+---
+
+### Option A: Cloudflare Tunnel with a Custom Domain (The Zero-Touch Portless Integration)
+
+Cloudflare Tunnel (`cloudflared`) establishes a persistent, encrypted, outbound-only connection between your local development machine and Cloudflare's global edge network. No router port-forwarding, static IPs, or dynamic DNS services are required.
+
+When combined with Portless's multi-TLD capabilities (`PORTLESS_TLD`), a single wildcard Cloudflare Tunnel routes all projects and auxiliary subdomains automatically:
+- `https://my-app.<your-domain.com>` -> proxies to local `my-app`
+- `https://api.my-app.<your-domain.com>` -> proxies to local `api.my-app`
+- `https://preview.my-app.<your-domain.com>` -> proxies to local `preview.my-app`
+
+#### Step 1: Install `cloudflared` CLI
+Install `cloudflared` globally using `mise` (recommended) or your system package manager:
+
+```bash
+# Via mise (recommended)
+mise use --global cloudflared@latest
+
+# Or on Fedora / RHEL
+sudo dnf install -y cloudflared
+
+# Or on Ubuntu / Debian
+sudo apt install -y cloudflared
+
+# Or on macOS
+brew install cloudflared
+
+# Verify installation
+cloudflared --version
+```
+
+#### Step 2: Authenticate with Cloudflare
+Log in to your Cloudflare account to download the account certificate:
+
+```bash
+cloudflared tunnel login
+```
+This opens your browser. Select your domain (`<your-domain.com>`) to authorize. Cloudflare will download an origin certificate to `~/.cloudflared/cert.pem`.
+
+#### Step 3: Create a Named Tunnel
+Create a persistent tunnel for your development workstation:
+
+```bash
+cloudflared tunnel create dev-tunnel
+```
+This generates a unique **Tunnel ID** (UUID) and creates credentials at `~/.cloudflared/<tunnel-uuid>.json`.
+
+#### Step 4: Configure Wildcard DNS Routing
+Route all subdomains under your custom domain directly through your tunnel:
+
+```bash
+cloudflared tunnel route dns dev-tunnel "*.<your-domain.com>"
+```
+*(Alternatively, in the Cloudflare Dashboard under DNS Records for `<your-domain.com>`, add a CNAME record: Name: `*`, Target: `<tunnel-uuid>.cfargotunnel.com`, Proxy Status: Proxied).*
+
+#### Step 5: Configure `~/.cloudflared/config.yml`
+Create or edit `~/.cloudflared/config.yml` to route incoming traffic directly to Portless's local HTTPS proxy on port 443:
+
+```yaml
+tunnel: <tunnel-uuid>
+credentials-file: /home/<username>/.cloudflared/<tunnel-uuid>.json
+
+ingress:
+  # Wildcard route for all apps and auxiliary subdomains to Portless HTTPS proxy
+  - hostname: "*.<your-domain.com>"
+    service: https://localhost:443
+    originRequest:
+      # Portless generates a local self-signed CA certificate for loopback.
+      # Cloudflare edge already terminates public TLS with a trusted certificate,
+      # so noTLSVerify allows the tunnel daemon to connect to Portless cleanly.
+      noTLSVerify: true
+
+  # Fallback catch-all (required by cloudflared)
+  - service: http_status:404
+```
+
+> [!TIP]
+> **Local CA Verification Alternative**: Instead of `noTLSVerify: true`, you can configure `cloudflared` to validate Portless's certificate authority by pointing to the Portless root certificate:
+> ```yaml
+> originRequest:
+>   caPool: /home/<username>/.portless/ca.pem
+> ```
+
+#### Step 6: Configure Portless for Your Custom Domain (`PORTLESS_TLD`)
+Inform Portless that `<your-domain.com>` is an active top-level domain alongside `.localhost`:
+
+Add to your shell profile (`~/.bashrc`, `~/.zshrc`) or user environment:
+```bash
+export PORTLESS_TLD="localhost,<your-domain.com>"
+```
+
+Or when running the Portless proxy daemon:
+```bash
+portless proxy start --tld localhost --tld <your-domain.com>
+```
+
+#### Step 7: Run `cloudflared` as a Background Service
+To keep the tunnel running across system restarts:
+
+```bash
+# Option 1: System-wide service (prompts for sudo)
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+
+# Option 2: Run directly or in a user systemd service
+cloudflared tunnel run dev-tunnel
+```
+
+#### Step 8: Ensure Vite Allows the Custom Domain
+In `vite.config.ts`, verify that `server.allowedHosts` is set to `true`:
+
+```typescript
+export default defineConfig({
+  plugins: [tailwindcss(), sveltekit()],
+  server: {
+    strictPort: true,
+    allowedHosts: true, // Permits *.localhost and *.<your-domain.com>
+  },
+});
+```
+
+#### Step 9 (Recommended): Cloudflare Zero Trust Access Protection
+If you do not want your in-development applications exposed publicly to the open internet:
+1. Navigate to **Cloudflare One / Zero Trust Dashboard** -> **Access** -> **Applications**.
+2. Click **Add an application** -> **Self-hosted**.
+3. Set Application Domain: `*.<your-domain.com>`.
+4. Add an Access Policy:
+   - Action: **Allow**
+   - Include Rule: **Emails ending in** `@yourcompany.com` or **Specific Email** `you@example.com` (sends a 6-digit One-Time PIN) or Google/GitHub OAuth.
+5. Save Application.
+*Now any device accessing `https://my-app.<your-domain.com>` is greeted with a sleek Cloudflare login screen before connecting directly to your local workstation!*
+
+---
+
+### Option B: Tailscale Sharing (`--tailscale` and `--funnel`)
+
+If you prefer to keep access restricted to devices enrolled in your private Tailscale network (tailnet):
+
+#### 1. Private Tailnet Sharing (`--tailscale`)
+Share your application strictly with authenticated devices on your tailnet:
+
+```bash
+# Run app with Tailscale flag
+portless my-app --tailscale vite dev
+```
+- Each app is assigned a dedicated HTTPS port on your Tailscale machine name (e.g. `https://my-workstation.<tailnet>.ts.net:8443`).
+- Requires the `tailscale` CLI installed and connected (`tailscale up`), with HTTPS certificates enabled on your tailnet.
+
+#### 2. Public Sharing via Tailscale Funnel (`--funnel`)
+Expose a specific app publicly over the internet without configuring a custom domain:
+
+```bash
+portless my-app --funnel vite dev
+```
+- Requires Tailscale Funnel to be enabled in your Tailscale admin console ACLs.
+- Public URL is served under your Tailscale node's public hostname.
+

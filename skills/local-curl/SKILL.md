@@ -24,6 +24,7 @@ It solves two critical challenges in agent-driven development:
 | `127.0.0.0/8` | IPv4 loopback address space (e.g. `127.0.0.1`, `127.0.0.2:3000`) |
 | `[::1]` | IPv6 loopback address |
 | `*.local` | Multicast DNS hostnames used in Portless LAN mode |
+| `*.<custom-domain>` | Custom TLDs or Cloudflare Tunnel domains configured via `PORTLESS_TLD` or `LCURL_ALLOWED_DOMAINS` |
 
 > [!CAUTION]
 > Any request targeting public domains (e.g. `google.com`), non-loopback private networks (e.g. `192.168.1.1`, `10.0.0.1`), or cloud metadata services (e.g. `169.254.169.254`) is immediately rejected with exit code `1` before `curl` is ever invoked.
@@ -121,6 +122,8 @@ cat payload.json | ./scripts/lcurl -X POST \
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
 | `PORTLESS_CA_PATH` | `~/.portless/ca.pem` | Path to custom Portless local CA certificate |
+| `PORTLESS_TLD` | (unset) | Comma-separated custom TLDs (e.g. `localhost,yourdomain.com`) allowed by Portless and permitted by `lcurl` |
+| `LCURL_ALLOWED_DOMAINS` | (unset) | Comma-separated list of additional permitted custom domains (e.g. `yourdomain.com`) |
 | `CURL_BIN` | `/usr/bin/curl` (or `which curl`) | Path to system `curl` binary |
 
 ---

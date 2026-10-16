@@ -120,7 +120,7 @@ portless service install
 
 ---
 
-## Local Domain Routing with Portless (`.localhost` & Subdomains)
+## Local Domain Routing & Remote Access (Portless, Cloudflare Tunnels, Tailscale)
 
 All local development in `overskill` uses [Portless](https://github.com/vercel-labs/portless) (by Vercel Labs) for zero-configuration local domain routing and automatic ephemeral port allocation:
 - **Base Domain**: `https://<project-name>.localhost` (e.g. `https://my-app.localhost`)
@@ -128,6 +128,8 @@ All local development in `overskill` uses [Portless](https://github.com/vercel-l
 - **RFC 6761 Zero-Configuration Loopback**: Under RFC 6761, `*.localhost` domains natively resolve to `127.0.0.1` and `::1` across all modern browsers and OS networking resolvers. **No `/etc/hosts` editing is required.**
 - **Automatic Ephemeral Port Allocation**: Portless automatically assigns an ephemeral port in the 4000–4999 range and forwards traffic from port 80/443 without manual port assignments or collisions.
 - **Native HTTPS & Isolated Cookies**: Portless issues and trusts local TLS certificates via `portless trust`, ensuring development matches production HTTPS and completely prevents auth session/cookie collisions between projects.
+- **Remote & Multi-Device Access via Cloudflare Tunnels**: Seamlessly route custom domains (`https://<project-name>.<your-domain.com>`) through a wildcard Cloudflare Tunnel (`cloudflared`) and `PORTLESS_TLD` for mobile phone/tablet testing and external webhook delivery without VPN client software or hardcoding private domains.
+- **Private Tailnet Sharing via Tailscale**: Built-in support for `portless <name> --tailscale` and `--funnel` for private team access across authorized tailnet devices.
 
 ---
 

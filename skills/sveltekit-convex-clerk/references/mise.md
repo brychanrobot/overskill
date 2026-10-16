@@ -7,6 +7,7 @@ In the `sveltekit-convex-clerk` workflow, `mise` is the recommended mechanism fo
 - **`pnpm`** (Strict package manager)
 - **`gh`** (GitHub CLI for repository creation and auth)
 - **`portless`** (Local development domain proxy and automatic port allocator for `<project-name>.localhost`)
+- **`cloudflared`** *(Optional)* (Cloudflare Tunnel daemon for zero-touch remote testing and custom domain routing)
 
 ---
 

@@ -117,6 +117,14 @@ def is_allowed_host(raw_target: str) -> bool:
     except ValueError:
         pass
 
+    # 5. Custom TLDs or domains configured via PORTLESS_TLD or LCURL_ALLOWED_DOMAINS
+    custom_tlds = os.environ.get("PORTLESS_TLD", "")
+    allowed_domains = os.environ.get("LCURL_ALLOWED_DOMAINS", "")
+    for domain in (custom_tlds + "," + allowed_domains).split(","):
+        domain = domain.strip().lstrip(".").lower()
+        if domain and (hostname == domain or hostname.endswith("." + domain)):
+            return True
+
     return False
 
 

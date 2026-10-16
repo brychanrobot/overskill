@@ -52,6 +52,12 @@ When executing this skill for non-software engineers, solo creators, or beginner
    - Under RFC 6761, `*.localhost` domains natively resolve to loopback (`127.0.0.1`) without editing `/etc/hosts` or needing elevated privileges.
    - Ephemeral ports (4000–4999) are allocated dynamically by the OS kernel and auto-injected into Vite, eliminating port collisions across concurrent projects without hardcoded port numbers.
    - Never expose raw colliding port numbers (`:5173`, `:5174`, `:3000`) or rely on raw `localhost:<port>` where cookies and local storage collide across different apps.
+8. **Remote & Multi-Device Testing Strategy (Cloudflare Tunnels vs. Tailscale)**:
+   - When the user wants to test on a physical mobile device (phone, tablet), share an active local dev server with collaborators, or receive external webhook deliveries (e.g. Clerk webhooks, Stripe events), **ask the user which remote exposure model they prefer**:
+     1. **Cloudflare Tunnel with Custom Domain** (Recommended: provides clean `https://<project-name>.<your-domain.com>` URLs with trusted public SSL and zero client app installation on mobile devices).
+     2. **Tailscale Sharing** (`--tailscale` for private tailnet or `--funnel` for public access).
+     3. **Localhost Only** (`.localhost` loopback via RFC 6761).
+   - **Strict Domain Privacy Rule**: Never commit or publish private custom domains to git repositories or shared skill files. Always use `<your-domain.com>` in shared documentation and configure actual domains via local environment variables (`PORTLESS_TLD`) and local daemon settings.
 
 ---
 
@@ -129,8 +135,9 @@ portless doctor
 > # 2. Ensure ~/.local/bin and mise shims are available in PATH
 > export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 >
-> # 3. Install required toolchain (Node.js LTS, pnpm, GitHub CLI, and Portless)
+> # 3. Install required toolchain (Node.js LTS, pnpm, GitHub CLI, Portless; cloudflared optional for remote tunnels)
 > "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest npm:portless@latest
+> # Optional for Cloudflare Tunnel remote routing: "$HOME/.local/bin/mise" use --global cloudflared@latest
 >
 > # 4. Activate mise for the current shell session
 > eval "$("$HOME/.local/bin/mise" activate bash)"
@@ -1059,6 +1066,31 @@ node scripts/record-demo.ts
 >    | ![Step 1](file:///path/to/step-1-initial.png) | ![Step 2](file:///path/to/step-2-completed.png) |
 >    ```
 
+#### 6. Multi-Device & Remote Access (Cloudflare Tunnels vs. Tailscale)
+
+When testing on physical mobile devices (iOS/Android), verifying webhook delivery (e.g. Clerk webhooks), or sharing an active dev server with collaborators:
+
+##### A. Ask the User for Their Preference
+> *"Would you like to configure remote access for mobile testing or webhook delivery?*
+> *1. **Cloudflare Tunnel with Custom Domain** (Recommended: instant `https://<project-name>.<your-domain.com>` with trusted public SSL and zero client app installation on mobile devices)*
+> *2. **Tailscale Sharing** (`--tailscale` for private tailnet access or `--funnel` for public exposure)*
+> *3. **Localhost Only** (`https://<project-name>.localhost` loopback via RFC 6761)*"
+
+##### B. If Cloudflare Tunnel with Custom Domain is Selected
+1. Obtain the user's custom domain (e.g. `yourdomain.com`). *(Strict rule: Never commit the user's real domain into shared repository files or skills).*
+2. Configure Portless with `export PORTLESS_TLD="localhost,<your-domain.com>"` in your shell profile or user environment.
+3. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#9-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
+4. Start the tunnel daemon (`cloudflared tunnel run dev-tunnel` or system service).
+5. The application is immediately accessible at `https://<project-name>.<your-domain.com>` from any smartphone, tablet, or browser on the internet without VPN clients!
+
+##### C. If Tailscale Sharing is Selected
+1. Run the application using Portless's built-in Tailscale flag:
+   ```bash
+   portless <project-name> --tailscale pnpm run dev
+   ```
+2. (Or for public internet access via Tailscale Funnel: `portless <project-name> --funnel pnpm run dev`).
+3. The application is accessible at `https://<node-name>.<tailnet>.ts.net:<assigned-port>` on authorized tailnet devices.
+
 ---
 
 ### Step 7: Remote GitHub Repository Creation & Licensing
@@ -1180,7 +1212,10 @@ Present the completed application to the user with enthusiasm, clear instruction
    > *"Here is your shareable link: `https://<your-project>.vercel.app`"*
    > *"Open it in your phone browser, test creating an account, and text it to family and friends!"*
 
-3. **Suggested Next Steps**:
+3. **Remote Development / Mobile Preview Link** *(If Cloudflare Tunnel or Tailscale configured)*:
+   > *"📱 **Remote Dev Preview:** You can test real-time dev changes on your phone at: `https://<project-name>.<your-domain.com>` (or via Tailscale: `https://<node-name>.<tailnet>.ts.net:<port>`)."*
+
+4. **Suggested Next Steps**:
    Suggest 2–3 fun improvements they can ask you to build next:
    - *"Would you like to add search and filtering for your items?"*
    - *"Would you like to add photo or image uploads?"*
