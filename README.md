@@ -18,6 +18,14 @@ Every skill in this repository is built following the official Antigravity Custo
 
 ---
 
+## Bundled Agents
+
+| Agent | Model | Description | Agent Definition |
+| :--- | :--- | :--- | :--- |
+| [`orchestrator-pro`](./agents/orchestrator-pro.md) | `pro` | Master architect and orchestrator that decomposes complex tasks, coordinates parallel workstreams, and dynamically assigns subagent model tiers based on cost, latency, and complexity heuristics. | [`orchestrator-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/orchestrator-pro.md) |
+
+---
+
 ## Using Skills with Antigravity (`agy`)
 
 ### Option 1: Install as an Antigravity Plugin (Recommended)
