@@ -25,6 +25,8 @@ Every skill in this repository is built following the official Antigravity Custo
 | [`orchestrator-pro`](./agents/orchestrator-pro.md) | `pro` | Master architect and orchestrator that decomposes complex tasks, coordinates parallel workstreams, and dynamically assigns subagent model tiers based on cost, latency, and complexity heuristics. | [`orchestrator-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/orchestrator-pro.md) |
 | [`research`](./agents/research.md) | `flash_lite` | Fast reconnaissance and investigation subagent for exploring codebases, symbol searches, file listings, pattern matching, documentation lookups, and log analysis. | [`research.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/research.md) |
 | [`developer`](./agents/developer.md) | `flash` | Precision implementation and testing subagent that writes clean code, creates and edits files, authors unit/regression tests, and runs validation commands. | [`developer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/developer.md) |
+| [`code-reviewer`](./agents/code-reviewer.md) | `flash` | Fast, objective code review specialist for routine features, unit test coverage, idiomatic style, and bug prevention. | [`code-reviewer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/code-reviewer.md) |
+| [`code-reviewer-pro`](./agents/code-reviewer-pro.md) | `pro` | Deep architectural, concurrency, and security auditor for high-stakes revisions, breaking changes, and mission-critical code. | [`code-reviewer-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/code-reviewer-pro.md) |
 
 ---
 
@@ -160,7 +162,9 @@ overskill/
 ├── agents/
 │   ├── orchestrator-pro.md        # Master architect and orchestrator definition
 │   ├── research.md                # Fast reconnaissance subagent definition
-│   └── developer.md               # Precision implementation subagent definition
+│   ├── developer.md               # Precision implementation subagent definition
+│   ├── code-reviewer.md           # Fast routine code review specialist definition
+│   └── code-reviewer-pro.md       # Deep architectural & security auditor definition
 ├── scripts/
 │   ├── cloudflare-domain.ts       # Automated Cloudflare zone and domain extractor from cert.pem
 │   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection
