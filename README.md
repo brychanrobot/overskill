@@ -23,6 +23,7 @@ Every skill in this repository is built following the official Antigravity Custo
 | Agent | Model | Description | Agent Definition |
 | :--- | :--- | :--- | :--- |
 | [`orchestrator-pro`](./agents/orchestrator-pro.md) | `pro` | Master architect and orchestrator that decomposes complex tasks, coordinates parallel workstreams, and dynamically assigns subagent model tiers based on cost, latency, and complexity heuristics. | [`orchestrator-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/orchestrator-pro.md) |
+| [`architect`](./agents/architect.md) | `pro` | System architect and technical planning specialist. Analyzes requirements, surveys codebases, designs system boundaries and data contracts, and drafts concrete Technical Implementation Plans (RFCs) without modifying code. | [`architect.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/architect.md) |
 | [`research`](./agents/research.md) | `flash_lite` | Fast reconnaissance and investigation subagent for exploring codebases, symbol searches, file listings, pattern matching, documentation lookups, and log analysis. | [`research.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/research.md) |
 | [`developer`](./agents/developer.md) | `flash` | Precision implementation and testing subagent that writes clean code, creates and edits files, authors unit/regression tests, and runs validation commands. | [`developer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/developer.md) |
 | [`code-reviewer`](./agents/code-reviewer.md) | `flash` | Fast, objective code review specialist for routine features, unit test coverage, idiomatic style, and bug prevention. | [`code-reviewer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/code-reviewer.md) |
@@ -161,6 +162,7 @@ overskill/
 ├── skills.json                    # AGY discovery manifest
 ├── agents/
 │   ├── orchestrator-pro.md        # Master architect and orchestrator definition
+│   ├── architect.md               # System architect and technical planning specialist definition
 │   ├── research.md                # Fast reconnaissance subagent definition
 │   ├── developer.md               # Precision implementation subagent definition
 │   ├── code-reviewer.md           # Fast routine code review specialist definition
