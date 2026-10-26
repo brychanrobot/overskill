@@ -23,6 +23,9 @@ Every skill in this repository is built following the official Antigravity Custo
 | Agent | Model | Description | Agent Definition |
 | :--- | :--- | :--- | :--- |
 | [`orchestrator-pro`](./agents/orchestrator-pro.md) | `pro` | Master architect and orchestrator that decomposes complex tasks, coordinates parallel workstreams, and dynamically assigns subagent model tiers based on cost, latency, and complexity heuristics. | [`orchestrator-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/orchestrator-pro.md) |
+| [`product-manager`](./agents/product-manager.md) | `pro` | Product strategy and requirements specialist. Translates ideas and user requests into structured Product Requirements Documents (PRDs), user stories with acceptance criteria, and scoped MVPs. | [`product-manager.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/product-manager.md) |
+| [`ux-researcher`](./agents/ux-researcher.md) | `flash` | User research, usability, and accessibility specialist. Evaluates user journeys, cognitive load, accessibility (WCAG), and usability heuristics. | [`ux-researcher.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/ux-researcher.md) |
+| [`ux-designer`](./agents/ux-designer.md) | `flash` | UI/UX, interaction design, and design system specialist. Crafts component specifications, responsive layouts, 5-state UI models, and Tailwind/shadcn design token guidelines. | [`ux-designer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/ux-designer.md) |
 | [`architect`](./agents/architect.md) | `pro` | System architect and technical planning specialist. Analyzes requirements, surveys codebases, designs system boundaries and data contracts, and drafts concrete Technical Implementation Plans (RFCs) without modifying code. | [`architect.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/architect.md) |
 | [`research`](./agents/research.md) | `flash_lite` | Fast reconnaissance and investigation subagent for exploring codebases, symbol searches, file listings, pattern matching, documentation lookups, and log analysis. | [`research.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/research.md) |
 | [`developer`](./agents/developer.md) | `flash` | Precision implementation and testing subagent that writes clean code, creates and edits files, authors unit/regression tests, and runs validation commands. | [`developer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/developer.md) |
@@ -162,6 +165,9 @@ overskill/
 ├── skills.json                    # AGY discovery manifest
 ├── agents/
 │   ├── orchestrator-pro.md        # Master architect and orchestrator definition
+│   ├── product-manager.md         # Product strategy and requirements specialist definition
+│   ├── ux-researcher.md           # User research, usability & accessibility specialist definition
+│   ├── ux-designer.md             # UI/UX, interaction & design token specialist definition
 │   ├── architect.md               # System architect and technical planning specialist definition
 │   ├── research.md                # Fast reconnaissance subagent definition
 │   ├── developer.md               # Precision implementation subagent definition
