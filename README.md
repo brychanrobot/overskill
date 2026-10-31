@@ -112,7 +112,80 @@ curl -sSL https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/s
 
 ## Toolchain Setup with `mise` (Recommended)
 
-To ensure consistent, reproducible execution without requiring root (`sudo`) permissions or polluting system directories, we recommend [`mise`](https://mise.jdx.dev) to manage essential developer toolchains (`gh`, `node`, `pnpm`, and `portless`) directly in `~/.local/bin`:
+To ensure consistent, reproducible execution without requiring root (`sudo`) permissions or polluting system directories, we recommend [`mise`](https://mise.jdx.dev) to manage essential developer toolchains (`caddy`, `cloudflared`, `gh`, `node`, `portless`, and `pnpm`) directly in `~/.local/bin`.
+
+### Automated Idempotent Setup (`scripts/setup-mise.sh`)
+
+`overskill` provides a bundled, idempotent setup script [`scripts/setup-mise.sh`](./scripts/setup-mise.sh) that configures `mise`, sets up the required global configuration, installs all tools, and registers a daily `systemd --user` auto-upgrade timer in one step:
+
+```bash
+# Run local setup script (supports --dry-run / -n)
+bash scripts/setup-mise.sh
+
+# Or run directly via curl from GitHub:
+curl -fsSL https://raw.githubusercontent.com/brychanrobot/overskill/main/scripts/setup-mise.sh | bash
+```
+
+### Required Configuration (`~/.config/mise/config.toml`)
+
+`scripts/setup-mise.sh` ensures `~/.config/mise/config.toml` contains:
+
+```toml
+[settings]
+prefer_offline = true
+
+[settings.self_update]
+auto = true
+
+[tools]
+caddy = "latest"
+cloudflared = "latest"
+gh = "latest"
+node = "latest"
+"npm:portless" = "latest"
+pnpm = "latest"
+```
+
+> [!WARNING]
+> **Why `prefer_offline = true` is Mandatory for `"latest"` Tools**:
+> By default, `mise` uses `prefer_offline = false`. When tools are pinned to `"latest"`, as soon as mise's remote version cache expires and a newer version is published upstream (e.g. `portless@0.16.0` vs installed `0.15.7`), every shim execution resolves `"latest"` to the *uninstalled* upstream release and crashes with:
+> ```text
+> mise ERROR <tool> is not a valid shim
+> ```
+> In addition, running `mise use <npm-tool>` while `node = "latest"` has a newer upstream version fails during mise's internal offline dependency check with `failed to resolve configured install dependency 'node@latest' ... while offline`.
+>
+> Setting `prefer_offline = true` guarantees that CLI commands and shims resolve instantly to the highest locally installed version, while intentional upgrades (`mise upgrade` and the daily auto-upgrade timer) continue fetching and installing new upstream releases.
+
+### Daily Auto-Upgrade Systemd User Timer (`mise-upgrade.timer`)
+
+The setup script installs `~/.config/systemd/user/mise-upgrade.service` and `~/.config/systemd/user/mise-upgrade.timer` to keep `mise` and all managed toolchains up to date automatically:
+
+```ini
+[Unit]
+Description=Upgrade mise and managed toolchains
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment="PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin"
+ExecStart=-%h/.local/bin/mise self-update -y
+ExecStart=%h/.local/bin/mise upgrade
+```
+
+```bash
+# Automatically activated by scripts/setup-mise.sh, or manually via:
+systemctl --user daemon-reload
+systemctl --user enable --now mise-upgrade.timer
+```
+
+### Portless Boot-Time Systemd Proxy TLD Synchronization
+
+If `portless` is configured to run as a boot-time `systemd` proxy service on port 443 (e.g. `/etc/systemd/system/portless.service` or user service), the service unit requires `Environment="PORTLESS_TLD=localhost,<your-domain.com>"` (or `--tld localhost --tld <your-domain.com>` CLI flags, or dynamically `Environment="PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)"`) so it routes requests across all configured domains (including custom Cloudflare Tunnel domains like `<your-domain.com>`) matching the user shell environment.
+
+### Manual Setup Steps
+
+If configuring manually without `scripts/setup-mise.sh`:
 
 ```bash
 # 1. Install mise to ~/.local/bin
@@ -121,19 +194,24 @@ curl -fsSL https://mise.run | sh
 # 2. Ensure ~/.local/bin and shims are in your PATH
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
-# 3. Install GitHub CLI, Node.js LTS, pnpm, and Portless
-mise use --global gh@latest node@lts pnpm@latest npm:portless@latest
+# 3. Configure prefer_offline = true and auto-update
+mise settings set prefer_offline true
+mise settings set self_update.auto true
 
-# 4. Initialize and trust the local Portless CA certificate (one-time sudo)
+# 4. Install toolchains
+mise use --global caddy@latest cloudflared@latest gh@latest node@latest npm:portless@latest pnpm@latest
+
+# 5. Initialize and trust the local Portless CA certificate (one-time sudo)
 portless trust
 # (On Linux Chrome/Chromium, import into NSS: certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem")
 
-# 5. On Fedora/RHEL with SELinux, allowlist mise Node for systemd execution:
+# 6. On Fedora/RHEL with SELinux, allowlist mise Node for systemd execution:
 # sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
 # sudo restorecon -v -R "$HOME/.local/share/mise/installs/node"
 
-# 6. Install the system startup service (or run `portless proxy start`)
-portless service install
+# 7. Install the system startup service (or run `portless proxy start`)
+portless service install --tld localhost --tld <your-domain.com>
+# (Or dynamically: portless service install --tld localhost --tld $(node scripts/cloudflare-domain.ts))
 ```
 
 > [!NOTE]
@@ -177,6 +255,7 @@ overskill/
 │   ├── cloudflare-domain.ts       # Automated Cloudflare zone and domain extractor from cert.pem
 │   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection
 │   ├── rewrite-pnpx.ts            # PreToolUse hook script rewriting npx & pnpx to pnpm dlx
+│   ├── setup-mise.sh              # Idempotent mise, toolchain & daily auto-upgrade timer setup
 │   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/
     ├── playwright/

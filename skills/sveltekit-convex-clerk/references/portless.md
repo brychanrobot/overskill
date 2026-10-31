@@ -104,12 +104,21 @@ Portless provides native service installation that sets up `/etc/systemd/system/
 # Install and start systemd service (prompts for sudo)
 portless service install
 
+# If using custom domains alongside localhost (e.g. <your-domain.com> for Cloudflare Tunnels), include them:
+portless service install --tld localhost --tld <your-domain.com>
+# Or dynamically lookup your Cloudflare domain:
+portless service install --tld localhost --tld $(node scripts/cloudflare-domain.ts)
+
 # Check service status
 portless service status
 
 # Uninstall service
 portless service uninstall
 ```
+
+> [!NOTE]
+> **Boot-Time Systemd Proxy TLD Synchronization**:
+> If `portless` runs a boot-time `systemd` proxy service on port 443, the service unit requires `Environment="PORTLESS_TLD=localhost,<your-domain.com>"` (or `--tld localhost --tld <your-domain.com>` in its CLI arguments, or dynamically `Environment="PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)"`) so it routes requests across all configured top-level domains matching the user shell environment.
 
 > [!TIP]
 > **Fedora / RHEL SELinux Allowlisting (Resolving Upstream Issue #368)**:
@@ -147,7 +156,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/share/pnpm/portless proxy start --foreground --port 443 --https
+Environment="PORTLESS_TLD=localhost,<your-domain.com>"
+ExecStart=%h/.local/share/mise/shims/portless proxy start --foreground --port 443 --https --tld localhost --tld <your-domain.com>
 Restart=on-failure
 RestartSec=3
 
@@ -274,6 +284,8 @@ No configuration changes are needed; every worktree runs concurrently without po
 | Action | Command | Description |
 | :--- | :--- | :--- |
 | **Inspect Active Routes** | `portless list` | Shows all currently active applications, domains, and assigned ports. |
+| **Prune Orphaned Servers** | `portless prune` | Detects dead CLI sessions, removes stale routes from `~/.portless/routes.json`, and terminates orphaned child dev servers (`SIGTERM`). |
+| **Force Prune (SIGKILL)** | `portless prune --force` | Forcefully kills stubborn orphaned dev servers (`SIGKILL`) and cleans up all stale routes. |
 | **Run Diagnostics** | `portless doctor` | Checks TLS certificates, CA trust, and proxy health. |
 | **Trust Certificate Authority** | `portless trust` | Adds the Portless local CA to the system trust store. |
 | **Install System Service** | `sudo portless service install` | Installs background systemd service to start proxy at boot. |
@@ -285,7 +297,155 @@ No configuration changes are needed; every worktree runs concurrently without po
 
 ---
 
-## 9. Remote & Multi-Device Access: Cloudflare Tunnels vs. Tailscale
+## 9. Cleaning Up Orphaned Dev Servers & Stale Routes (`portless prune`)
+
+In multi-agent and active development workflows, orphaned background processes and stale routing entries can linger in `~/.portless/routes.json`.
+
+### Why Orphaned Dev Servers Occur
+
+Orphaned processes and stale routes typically happen in the following scenarios:
+1. **Abrupt Terminal Closure or Host Restarts**: If a terminal tab or window running `portless run ...` is closed abruptly, the shell session dies without sending normal cleanup signals to child processes.
+2. **Hard Termination (`SIGKILL`)**: If a process or container is forcefully killed (`kill -9` or via task managers), Portless's `process.on('exit')` cleanup hooks never fire.
+3. **Canceled or Terminated Background Tasks & Subagents**: When an orchestrator or background task manager kills a subagent or dev server task, the parent CLI process may exit before child compilers (e.g., `vite dev`) terminate.
+4. **Test Runner Signal Propagation Gaps**: When test runners (like Playwright) launch `pnpm dev` and send `SIGTERM` upon completion, `pnpm` often fails to forward termination signals down the entire process tree (`pnpm -> portless -> vite`), leaving the grandchild `vite` process running silently in the background while holding its ephemeral port.
+
+### How `portless prune` Works Under the Hood
+
+When you execute `portless prune`:
+1. **Advisory File Locking**: Acquires an advisory lock on `~/.portless/routes.json` to safely inspect and mutate routing state without race conditions.
+2. **Process Liveness Verification (`kill(pid, 0)`)**: Checks each route's owning CLI process PID to verify whether the parent process is still alive. If the PID is dead, the route is marked stale.
+3. **Tunnel Teardown**: Automatically tears down any stale Tailscale serve bindings or dead ngrok tunnels associated with dead routes.
+4. **Surviving Child Process Detection**: Inspects the TCP port of each stale route using OS socket inspection (`lsof -ti tcp:<port> -sTCP:LISTEN` on Linux/macOS, or `netstat -ano` on Windows). This detects surviving orphaned child dev servers (such as `vite dev` or Next.js) that were left running after the parent `portless` CLI died.
+5. **Targeted Process Termination**:
+   - `portless prune`: Sends `SIGTERM` to allow child processes to shut down gracefully and release resources.
+   - `portless prune --force`: Sends `SIGKILL` to forcefully terminate stubborn processes that refuse to exit.
+6. **Route Pruning**: Removes the stale entries from `~/.portless/routes.json` so ports and domain routes are immediately freed for future runs.
+
+### Command Usage & Output
+
+Standard prune (graceful termination via `SIGTERM`):
+```bash
+portless prune
+```
+Example output:
+```text
+  consensauce.localhost :4766 - killed PID 142899 (SIGTERM)
+  my-app.localhost :4123 - route removed (port already free)
+
+Pruned 2 stale routes, killed 1 orphaned process.
+```
+
+When no stale routes exist:
+```text
+No orphaned routes found.
+```
+
+Forceful prune (immediate termination via `SIGKILL`):
+```bash
+portless prune --force
+```
+
+### When to Run `portless prune`
+
+Execute `portless prune` (or `portless prune --force`):
+- **Before starting a dev server** after an interrupted session, terminal crash, or host reboot.
+- **After killing a background task or subagent** that ran a local web server or dev toolchain.
+- **After a hung Playwright test run** where the test runner exited or timed out while waiting for child dev servers.
+- **When `portless doctor` or `portless list`** warns about stale routes, conflicting domains, or unreachable port mappings.
+
+---
+
+## 10. Test Runner Lifecycle & Playwright Integration
+
+Running automated integration and end-to-end (E2E) tests alongside Portless requires understanding process tree lifecycles and reverse proxy timing.
+
+### The Playwright `webServer` Hang Pitfall
+
+In standard starter configurations, Playwright's `playwright.config.ts` often includes a `webServer` block that executes `command: 'pnpm run dev'`:
+
+```ts
+// ❌ ANTI-PATTERN: Can hang indefinitely on exit with Portless
+export default defineConfig({
+  webServer: {
+    command: 'pnpm run dev',
+    url: 'https://my-app.localhost',
+    reuseExistingServer: false,
+  },
+});
+```
+
+**Why This Hangs**:
+1. When Playwright executes `command: 'pnpm run dev'`, `pnpm` executes `portless run vite dev`, which spawns `vite dev`. The resulting process tree is:
+   `Playwright Runner` $\to$ `pnpm` $\to$ `portless` $\to$ `vite dev`.
+2. Once the test suite passes, Playwright attempts to shut down the `webServer` by sending `SIGTERM` to the immediate child (`pnpm`).
+3. `pnpm` does not reliably forward POSIX termination signals down to grandchild processes. As a result:
+   - The `pnpm` process terminates.
+   - The child `portless` CLI and `vite dev` processes survive in the background, keeping the ephemeral port bound.
+   - Playwright waits indefinitely for the process tree and socket to close, hanging the test run at 100% completion.
+
+### The Solution: Decoupled Daemon & `reuseExistingServer: true`
+
+To prevent test runner hangs:
+1. **Run Dev Servers as Background Daemons**: Launch `pnpm dev` as a separate, persistent background task or daemon (e.g. `IsDaemon: true` in agent tooling or in a dedicated terminal session) before running tests.
+2. **Configure `reuseExistingServer: true`**: Set `reuseExistingServer: true` in `playwright.config.ts` so Playwright attaches to the existing, healthy Portless dev server instead of trying to spawn and manage a transient child process tree:
+   ```ts
+   // playwright.config.ts
+   import { defineConfig, devices } from '@playwright/test';
+   import pkg from './package.json';
+
+   const projectName = pkg.name || 'app';
+   const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
+     process.env.PORTLESS_URL ||
+     (process.env.LOCAL_DOMAIN ? `https://${process.env.LOCAL_DOMAIN}` : `https://${projectName}.localhost`);
+
+   export default defineConfig({
+     testDir: './e2e',
+     webServer: {
+       command: 'pnpm run dev',
+       url: baseURL,
+       reuseExistingServer: true, // Always reuse persistent Portless daemon locally
+     },
+     use: {
+       baseURL,
+       trace: 'on-first-retry',
+     },
+     projects: [
+       {
+         name: 'chromium',
+         use: { ...devices['Desktop Chrome'] },
+       },
+     ],
+   });
+   ```
+3. **Clean Up with `portless prune`**: If a test run or background server task is ever canceled, interrupted, or stalled, run `portless prune` (or `portless prune --force`) to immediately reclaim the port and remove stale routes.
+
+### The Cold-Start 502 Bad Gateway Race
+
+Because Portless binds port 443 immediately while Vite takes 1–3 seconds to compile on cold start, direct test navigations (`page.goto(baseURL)`), `playwright-cli.ts` invocations, or tests started immediately after launching a background daemon can receive an HTTP `502 Bad Gateway` from the proxy. In Playwright, `page.goto()` resolves without throwing an exception on HTTP 502, rendering the Portless 502 error page and causing subsequent element locators to time out.
+
+**How to Mitigate the Race**:
+- **Start the Server Ahead of Time**: By keeping the dev server running as a persistent daemon before invoking tests, the cold-start window is completely avoided.
+- **Validate `res?.ok()` in Test Probes**: When authoring health check scripts or Playwright CLI commands, explicitly assert that the response status is successful (`200 OK`) with a short retry loop rather than merely checking socket connectivity:
+  ```ts
+  // Example warm-up probe with retry
+  const maxRetries = 10;
+  let isReady = false;
+  for (let i = 0; i < maxRetries; i++) {
+    const res = await page.request.get(baseURL).catch(() => null);
+    if (res?.ok()) {
+      isReady = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!isReady) {
+    throw new Error(`Dev server at ${baseURL} failed to respond with 200 OK within timeout.`);
+  }
+  ```
+
+---
+
+## 11. Remote & Multi-Device Access: Cloudflare Tunnels vs. Tailscale
 
 While `.localhost` domains natively resolve on the local machine via RFC 6761, testing applications on mobile devices (smartphones, tablets), sharing preview builds with collaborators, or receiving external webhook deliveries (e.g. Clerk, Stripe, GitHub webhooks) requires remote network exposure.
 
@@ -440,6 +600,10 @@ portless service install --tld localhost --tld (node scripts/cloudflare-domain.t
 
 *(Alternatively, if running without systemd services as an ad-hoc terminal daemon: `portless proxy stop && portless proxy start --https --tld localhost --tld <domain>`).*
 
+> [!NOTE]
+> **Boot-Time Systemd Proxy TLD Synchronization**:
+> If Portless is managed via systemd (system service `/etc/systemd/system/portless.service` or user service `~/.config/systemd/user/portless.service`), ensure the service unit includes `Environment="PORTLESS_TLD=localhost,<your-domain.com>"` (or `--tld localhost --tld <your-domain.com>` arguments, or dynamically `Environment="PORTLESS_TLD=$(node scripts/cloudflare-domain.ts --tld)"`) so that port 443 routes requests for your custom domain alongside `.localhost` immediately on OS boot matching your user shell environment.
+
 > [!IMPORTANT]
 > **User Terminal Execution (Never use `sudo` directly)**:
 > The agent MUST instruct the user to run `portless service install` in their own interactive terminal without `sudo`.
@@ -459,7 +623,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/<username>/.local/share/mise/installs/cloudflared/latest/cloudflared tunnel run dev-tunnel
+ExecStart=%h/.local/share/mise/shims/cloudflared tunnel run dev-tunnel
 Restart=on-failure
 RestartSec=5
 KillSignal=SIGTERM

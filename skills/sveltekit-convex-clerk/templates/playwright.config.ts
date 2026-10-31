@@ -11,7 +11,8 @@ export default defineConfig({
   webServer: {
     command: 'pnpm run dev',
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true, // Always reuse persistent Portless daemon; prevents Playwright from spawning/leaking child processes
+    timeout: 60 * 1000,
   },
   use: {
     baseURL,

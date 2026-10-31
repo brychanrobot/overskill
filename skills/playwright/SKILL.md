@@ -199,3 +199,92 @@ node skills/playwright/scripts/playwright-cli.ts create https://my-app.localhost
 | `screenshot <url>` | On-demand full-page visual proof |
 | `snapshot <url>` | Text-based accessibility tree inspection |
 | `auth-setup` | Clerk test user generation & ticket token sign-in |
+
+---
+
+## 6. Dev Server Lifecycle, Portless & Clean Exit Management
+
+When testing local web applications served under Portless (`*.localhost`), proper lifecycle management prevents test suite hangs and dangling processes.
+
+### The `pnpm -> portless -> vite` Process Tree Hang
+
+When Playwright's `playwright.config.ts` attempts to manage the dev server directly via `webServer: { command: 'pnpm run dev' }`, the resulting process hierarchy is:
+`Playwright Runner` $\to$ `pnpm` $\to$ `portless` $\to$ `vite dev`.
+
+- **The Failure Mode**: After tests pass or fail, Playwright sends a `SIGTERM` signal to the immediate child (`pnpm`). However, package managers like `pnpm` do not reliably propagate termination signals down to grandchild processes (`portless` and `vite`).
+- **The Symptom**: The underlying `vite dev` process remains alive and listening on its ephemeral port, while Playwright hangs indefinitely waiting for the `webServer` process tree and socket to close cleanly.
+
+### Mandatory Architecture: Persistent Daemon & `reuseExistingServer: true`
+
+To guarantee clean, instant test execution and exit without process hangs:
+1. **Decouple the Dev Server**: Run `pnpm dev` as a separate, persistent background daemon (e.g. `IsDaemon: true` in Antigravity task management or in a dedicated background shell) before launching Playwright tests.
+2. **Configure `reuseExistingServer: true`**: In `playwright.config.ts`, always set `reuseExistingServer: true`:
+   ```ts
+   // playwright.config.ts
+   import { defineConfig, devices } from '@playwright/test';
+   import pkg from './package.json';
+
+   const projectName = pkg.name || 'app';
+   const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
+     process.env.PORTLESS_URL ||
+     (process.env.LOCAL_DOMAIN ? `https://${process.env.LOCAL_DOMAIN}` : `https://${projectName}.localhost`);
+
+   export default defineConfig({
+     testDir: './e2e',
+     webServer: {
+       command: 'pnpm run dev',
+       url: baseURL,
+       reuseExistingServer: true, // Reuse persistent Portless server; prevents process tree hang on exit
+     },
+     use: {
+       baseURL,
+       trace: 'on-first-retry',
+     },
+     projects: [
+       {
+         name: 'chromium',
+         use: { ...devices['Desktop Chrome'] },
+       },
+     ],
+   });
+   ```
+
+### Cold-Start 502 Bad Gateway Race & `res?.ok()` Probes
+
+Because Portless binds port 443 immediately while Vite takes 1–3 seconds to compile on cold start, direct test navigations (`page.goto(baseURL)`), `playwright-cli.ts` invocations, or tests started immediately after launching a background daemon can receive an HTTP `502 Bad Gateway` from the proxy. In Playwright, `page.goto()` resolves without throwing an exception on HTTP 502, rendering the Portless 502 error page and causing subsequent element locators to time out.
+
+- **The Remedy**: Running the dev server as a persistent daemon avoids cold-start races entirely. When authoring test probes or pre-flight verification scripts, always verify `res?.ok()` with a retry loop rather than merely checking socket availability:
+  ```ts
+  // Resilient warm-up probe
+  const maxRetries = 10;
+  let isReady = false;
+  for (let i = 0; i < maxRetries; i++) {
+    const res = await page.request.get(baseURL).catch(() => null);
+    if (res?.ok()) {
+      isReady = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!isReady) {
+    throw new Error(`Dev server at ${baseURL} failed to respond with 200 OK within timeout.`);
+  }
+  ```
+
+### Reaping Orphaned Servers with `portless prune`
+
+If a test run, background task, or subagent session crashes or is terminated before closing its server, orphaned `vite dev` processes may linger holding ephemeral ports and leave stale entries in `~/.portless/routes.json`.
+
+Clean them up instantly with `portless prune`:
+```bash
+# Graceful cleanup: terminates orphaned child processes (SIGTERM) & removes stale routes
+portless prune
+
+# Forceful cleanup: kills stubborn processes (SIGKILL) & clears stale routes
+portless prune --force
+```
+
+Run `portless prune`:
+- After killing or canceling any background task or subagent that ran dev servers or E2E tests.
+- Whenever a Playwright run hangs on exit or fails due to an unresponsive local server.
+- Before starting a new dev server session after an interrupted workflow.

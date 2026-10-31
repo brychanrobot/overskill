@@ -42,7 +42,7 @@ When executing this skill for non-software engineers, solo creators, or beginner
    - Always present the live mobile-friendly Vercel production link: `https://<app>.vercel.app` with instructions on how to test logging in on their phone.
 5. **Proactive Toolchain Setup Offer with `mise`**:
    - If `node`, `pnpm`, `gh`, or `portless` are missing, never fail or leave the user stranded with a missing command error.
-   - Gently offer to set up the entire toolchain using `mise` in `~/.local/bin` (`node@lts`, `pnpm@latest`, `gh@latest`, `npm:portless@latest` — no sudo or admin privileges required).
+   - Gently offer to set up the entire toolchain using `mise` in `~/.local/bin` (`node@latest`, `pnpm@latest`, `gh@latest`, `npm:portless@latest`, `caddy@latest`, `cloudflared@latest` — no sudo or admin privileges required).
 6. **Strictly Forbid `npx` (Only `pnpm dlx`)**:
    - **Never** invoke or suggest `npx`. All one-off CLIs must run via `pnpm dlx` (e.g., `pnpm dlx sv create`, `pnpm dlx vercel whoami`, `pnpm dlx convex dev`). Project packages run via `pnpm <command>`.
 7. **Mandatory Portless Local Routing (`<project-name>.localhost` & Subdomains)**:
@@ -125,35 +125,35 @@ portless doctor
 > If any of these tools (`node`, `pnpm`, `gh`, or `portless`) are missing, the agent MUST offer to set up the toolchain automatically using `mise` in `~/.local/bin`:
 > > *"I noticed some required tools ([missing tools, e.g. Node.js, pnpm, GitHub CLI, or Portless]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
 >
-> If the user accepts (or in autonomous agent mode), execute:
+> If the user accepts (or in autonomous agent mode), execute the automated setup script [`scripts/setup-mise.sh`](references/mise.md#1-automated-idempotent-setup-scriptssetup-misesh):
 > ```bash
-> # 1. Install mise to ~/.local/bin if not already present
-> if ! command -v mise >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/mise" ]; then
->   curl -fsSL https://mise.run | sh
-> fi
+> # 1. Run the bundled setup script (or: curl -fsSL https://raw.githubusercontent.com/brychanrobot/overskill/main/scripts/setup-mise.sh | bash)
+> bash scripts/setup-mise.sh
 >
 > # 2. Ensure ~/.local/bin and mise shims are available in PATH
 > export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 >
-> # 3. Install required toolchain (Node.js LTS, pnpm, GitHub CLI, Portless; cloudflared optional for remote tunnels)
-> "$HOME/.local/bin/mise" use --global node@lts pnpm@latest gh@latest npm:portless@latest
-> # Optional for Cloudflare Tunnel remote routing: "$HOME/.local/bin/mise" use --global cloudflared@latest
->
-> # 4. Activate mise for the current shell session
+> # 3. Activate mise for the current shell session
 > eval "$("$HOME/.local/bin/mise" activate bash)"
 >
-> # 5. If local CA is not yet trusted, prompt the user to initialize it:
+> # 4. If local CA is not yet trusted, prompt the user to initialize it:
 > # portless trust
 > # (On Linux Chrome/Chromium, import into NSS databases for native and Flatpak Chrome:
 > #  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem"
 > #  [ -d "$HOME/.var/app/com.google.Chrome/data/pki/nssdb" ] && certutil -d sql:$HOME/.var/app/com.google.Chrome/data/pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem")
 > #
-> # 6. Start the background proxy daemon or install system startup service:
+> # 5. Start the background proxy daemon or install system startup service:
 > # (On Fedora/RHEL with SELinux, allowlist Node first:
 > #  sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
 > #  sudo restorecon -v -R "$HOME/.local/share/mise/installs/node")
 > # portless service install   # or: portless proxy start
 > ```
+>
+> > [!WARNING]
+> > **Why `prefer_offline = true` in `~/.config/mise/config.toml` is Mandatory**:
+> > When pinning tools to `"latest"`, `mise` defaults to `prefer_offline = false`. Whenever the remote version cache expires and a newer version exists upstream, shims attempt to invoke the uninstalled upstream release and crash with `mise ERROR <tool> is not a valid shim`. In addition, running `mise use <npm-tool>` fails during internal offline dependency checks with `failed to resolve configured install dependency 'node@latest' ... while offline`.
+> >
+> > Always ensure `~/.config/mise/config.toml` includes `prefer_offline = true` (configured automatically by `scripts/setup-mise.sh` or via `mise settings set prefer_offline true`). This guarantees commands and shims resolve instantly to the highest locally installed version, while `mise upgrade` continues fetching new releases.
 
 #### 2. Verify Developer CLI Authentication States
 Before creating any files, verify that local developer CLI tools are authenticated and available.
@@ -199,6 +199,8 @@ Common examples to inspire them:
 
 ### Step 2: Scaffolding Automation (SvelteKit + Tailwind CSS v4 + Vitest + Playwright)
 
+#### 1. Scaffold SvelteKit Project & Official Add-ons
+
 Initialize a minimal SvelteKit project with TypeScript using Svelte's official CLI (`sv`) via `pnpm dlx`, and install official add-ons for **Tailwind CSS v4**, **Vitest**, and **Playwright**:
 
 ```bash
@@ -211,6 +213,8 @@ pnpm dlx sv add tailwindcss vitest="usages:unit,component" playwright --install 
 # 3. Install Playwright browser engines
 pnpm exec playwright install --with-deps chromium
 ```
+
+#### 2. Playwright & Dev Server Lifecycle Configuration
 
 > [!CRITICAL]
 > **Playwright & Dev Server Lifecycle Configuration (Preventing ENOENT 500 Crashes)**:
@@ -234,7 +238,7 @@ pnpm exec playwright install --with-deps chromium
 >      webServer: {
 >        command: 'pnpm run dev',
 >        url: baseURL,
->        reuseExistingServer: !process.env.CI,
+>        reuseExistingServer: true, // Always reuse persistent Portless background daemon locally
 >      },
 >      use: {
 >        baseURL,
@@ -248,6 +252,13 @@ pnpm exec playwright install --with-deps chromium
 >      ],
 >    });
 >    ```
+>
+> > [!WARNING]
+> > **Playwright `webServer` Process Tree Hang & `portless prune`**:
+> > When `webServer` executes `pnpm run dev`, the process hierarchy is `Playwright` $\to$ `pnpm` $\to$ `portless` $\to$ `vite dev`. Playwright sends `SIGTERM` to `pnpm` when tests complete, but `pnpm` does not reliably forward termination signals down to grandchild processes (`portless` and `vite`). The dev server survives holding the ephemeral port, causing Playwright to hang indefinitely waiting for the `webServer` process tree to exit.
+> >
+> > Setting `reuseExistingServer: true` ensures Playwright attaches to your active, persistent Portless background dev server without spawning and leaking transient processes. If an interrupted test run, crashed session, or terminated subagent leaves dangling dev servers behind, run `portless prune` (or `portless prune --force`) to immediately kill orphaned processes and purge stale routes from `~/.portless/routes.json`.
+>
 > 2. Ensure `vite.config.ts` includes `strictPort: true` to prevent port drift, and `allowedHosts: true` to allow Portless proxying:
 >    ```ts
 >    // vite.config.ts
@@ -307,7 +318,17 @@ All local development in `overskill` requires Portless to serve the app under a 
    pnpm run dev
    ```
    Portless checks if the local proxy daemon is running (or prompts to auto-start it), automatically assigns a free ephemeral port (4000–4999), auto-injects `--port` and `--host` into Vite, and serves the application at `https://<project-name>.localhost`.
-   *(Tip: To keep the proxy running continuously in the background without startup prompts, run `portless proxy start` or configure a `systemd --user` service as documented in `references/portless.md`).*
+   *(Tip: To keep the proxy running continuously in the background without startup prompts, run `portless proxy start` or configure a `systemd --user` service as documented in [`references/portless.md`](references/portless.md#option-b-systemd-user-service-systemd---user)).*
+
+   > [!TIP]
+   > **Lifecycle Hygiene (`portless prune`)**:
+   > Before starting the dev server after an interrupted session, machine restart, or canceled background subagent, run `portless prune` (or `portless prune --force`):
+   > ```bash
+   > portless prune
+   > ```
+   > This automatically scans `~/.portless/routes.json`, reaps dead CLI routes, and sends `SIGTERM`/`SIGKILL` to any surviving orphaned child dev servers (like `vite dev`) holding previous ephemeral ports.
+
+#### 4. Clean Up Legacy Lint Configurations
 
 Ensure no legacy configuration files or dependencies were introduced. If any `.eslintrc*`, `.prettier*`, or `eslint*` dependencies exist, remove them immediately:
 
@@ -1013,6 +1034,14 @@ pnpm run format
 pnpm run test:unit
 ```
 
+> [!TIP]
+> **Dev Server Lifecycle & Test Hang Prevention**:
+> When running E2E suites or Playwright tests, ensure the local dev server is already running as a background daemon (`IsDaemon: true`). If Playwright ever hangs after completing tests, or if an earlier dev session/subagent was interrupted, run `portless prune` (or `portless prune --force`):
+> ```bash
+> portless prune
+> ```
+> This terminates any orphaned child dev servers (`vite dev`) left behind holding ephemeral ports and clears stale routes from `~/.portless/routes.json`.
+
 #### 4. Test User Provisioning & Interactive Beta-Testing (Playwright CLI)
 
 Before finalizing, interactively beta-test both public and authenticated user flows using the bundled **Playwright CLI script** (see [`playwright` skill](../playwright/SKILL.md)):
@@ -1099,7 +1128,7 @@ When testing on physical mobile devices (iOS/Android), verifying webhook deliver
      > [!IMPORTANT]
      > Do **NOT** prefix with `sudo` and do **NOT** attempt to run `portless service install` from the agent. Portless handles elevation internally and prompts the user for their administrator password interactively. Agents lack an interactive TTY and will block indefinitely on sudo password prompts.
 3. Ensure the wildcard DNS route is configured (`cloudflared tunnel route dns dev-tunnel "*.$DOMAIN"`).
-4. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#9-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
+4. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#11-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
 5. Start or enable the background user service (`systemctl --user enable --now cloudflared` or `cloudflared tunnel run dev-tunnel`).
 6. The application is immediately accessible at `https://<project-name>.<your-domain>` from any smartphone, tablet, or browser on the internet without VPN clients!
 

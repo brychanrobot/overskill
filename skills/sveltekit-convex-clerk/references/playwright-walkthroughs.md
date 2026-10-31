@@ -11,7 +11,7 @@ Playwright provides built-in methods to capture screenshots of full pages or ind
 ### Full-Page Screenshot
 ```ts
 // In any Playwright test or script:
-await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
+await page.goto(process.env.PORTLESS_URL || 'https://<project-name>.localhost', { waitUntil: 'networkidle' });
 await page.screenshot({ 
   path: 'static/screenshots/homepage.png', 
   fullPage: true 
@@ -72,7 +72,7 @@ You can customize the script to record any specific user flow:
 import { recordWalkthrough } from './record-demo.ts';
 
 await recordWalkthrough({
-  url: 'http://localhost:5173',
+  url: process.env.PORTLESS_URL || 'https://<project-name>.localhost',
   outputGifPath: 'static/demo.gif',
   screenshotsDir: 'static/screenshots',
   width: 1200,
