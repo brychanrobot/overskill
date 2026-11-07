@@ -10,6 +10,7 @@ Every skill in this repository is built following the official Antigravity Custo
 
 | Skill | Stack / Focus | Description | Raw URL for AGY |
 | :--- | :--- | :--- | :--- |
+| [`orchestrator-pro`](./skills/orchestrator-pro/SKILL.md) | Multi-Agent Orchestration, Architecture, Task Decomposition, Verification, AGY Cloud | Master architect and principal engineering orchestrator. Activates orchestrator-pro persona, decomposes complex engineering problems into parallel workstreams, dynamically registers and coordinates the overskill subagent team, and enforces multi-tiered verification. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/orchestrator-pro/SKILL.md) |
 | [`sveltekit-convex-clerk`](./skills/sveltekit-convex-clerk/SKILL.md) | SvelteKit, Vite, TypeScript, Tailwind CSS v4, shadcn-svelte, Biome, Vitest, Playwright, Convex, Clerk, Vercel | Scaffolds, configures, wires, creates a GitHub repo for, tests, captures screenshot/GIF walkthroughs for, and deploys full-stack reactive SvelteKit applications with real-time backend, auth, and accessible UI. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md) |
 | [`clerk`](./skills/clerk/SKILL.md) | Clerk, Authentication, Clerk CLI (`pnpm dlx clerk`), Multi-Framework | Adds Clerk authentication with the Clerk CLI using `pnpm dlx clerk`. Supports accountless instant dev keys, linking existing apps, prebuilt UI controls, and multi-tenancy. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/clerk/SKILL.md) |
 | [`jj`](./skills/jj/SKILL.md) | Jujutsu (jj), Version Control, MCP Tools | Strictly mandates Jujutsu MCP tools, bottom-up squash workflow for stack modifications, story-driven commit descriptions, and rebase conflict resolution. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/jj/SKILL.md) |
@@ -54,7 +55,7 @@ agy plugin install https://github.com/brychanrobot/overskill
 ```
 
 #### Keeping Plugins Automatically Updated (Smart Sync Poller)
-To ensure all installed Git-based plugins stay continuously up to date without manual intervention, use the bundled smart poller [`scripts/sync-agy-plugins.sh`](./scripts/sync-agy-plugins.sh). It scans `~/.gemini/config/plugins/`, checks upstream `git ls-remote` across all installed git plugins in ~200ms, and only triggers `agy plugin install` when upstream commits have actually changed:
+To ensure all installed Git-based plugins stay continuously up to date without manual intervention, use the bundled smart poller [`scripts/sync-agy-plugins.sh`](./scripts/sync-agy-plugins.sh). It scans `~/.gemini/config/plugins/`, checks upstream `git ls-remote` across all installed git plugins in ~200ms, and only triggers updates when upstream commits have actually changed. It supports both desktop environments and headless Antigravity Cloud VMs (handling `nobody:nogroup` FUSE mounts via `safe.directory="*"` and automatically syncing skills and agents to `~/.gemini/skills/` and `~/.gemini/agents/` when the desktop `agy` CLI is absent):
 
 ```bash
 # 1. Download and install the sync script to ~/.local/bin
@@ -258,6 +259,8 @@ overskill/
 │   ├── setup-mise.sh              # Idempotent mise, toolchain & daily auto-upgrade timer setup
 │   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/
+    ├── orchestrator-pro/
+    │   └── SKILL.md               # Zero-symlink DRY wrapper activating orchestrator-pro in AGY
     ├── playwright/
     │   ├── SKILL.md               # Playwright browser automation and testing guide
     │   └── scripts/
