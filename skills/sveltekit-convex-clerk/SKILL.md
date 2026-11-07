@@ -38,7 +38,7 @@ When executing this skill for non-software engineers, solo creators, or beginner
 3. **Click-by-Click Guidance for Keys**:
    - Guide the user step-by-step with direct clickable links when setting up Clerk and Convex. Never use terms like "JWT issuer domain" without explaining where to click.
 4. **Milestone Celebrations & Clickable Links**:
-   - Always present a clickable local preview link using Portless: `https://<project-name>.localhost` (with subdomains `https://<endpoint>.<project-name>.localhost` for auxiliary endpoints), keeping all services tidy without port collisions.
+   - Always present a clickable local preview link using Portless: `https://<project-name>.localhost` (with subdomains `https://<endpoint>.<project-name>.localhost` for auxiliary endpoints), keeping all services tidy without port collisions. Whenever starting or reporting a Portless dev server, always present all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both `https://<project-name>.localhost` and any configured tunnel TLD links (`https://<project-name>.<your-domain.com>`) are surfaced.
    - Always present the live mobile-friendly Vercel production link: `https://<app>.vercel.app` with instructions on how to test logging in on their phone.
 5. **Proactive Toolchain Setup Offer with `mise`**:
    - If `node`, `pnpm`, `gh`, or `portless` are missing, never fail or leave the user stranded with a missing command error.
@@ -1040,7 +1040,7 @@ pnpm run test:unit
 > ```bash
 > portless prune
 > ```
-> This terminates any orphaned child dev servers (`vite dev`) left behind holding ephemeral ports and clears stale routes from `~/.portless/routes.json`.
+> This terminates any orphaned child dev servers (`vite dev`) left behind holding ephemeral ports and clears stale routes from `~/.portless/routes.json`. Whenever starting or reporting a Portless dev server during local verification, agents must present all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both `https://<project-name>.localhost` and any configured tunnel TLD links (`https://<project-name>.<your-domain.com>`) are surfaced.
 
 #### 4. Test User Provisioning & Interactive Beta-Testing (Playwright CLI)
 
@@ -1255,6 +1255,7 @@ Present the completed application to the user with enthusiasm, clear instruction
 
 1. **Local Preview Link**:
    > *"💻 **Local Preview:** You can test your app right now on your computer at: `https://<project-name>.localhost` (served via Portless over trusted HTTPS — zero port collisions or messy numbers!)."*
+   *(Note: Always present all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both `https://<project-name>.localhost` and any configured tunnel TLD links, e.g. `https://<project-name>.<your-domain.com>`, are surfaced.)*
 
 2. **Live Mobile & Web Share Link**:
    > *"🎉 **Your App is Live on the Internet!**"*

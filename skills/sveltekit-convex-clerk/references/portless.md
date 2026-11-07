@@ -221,7 +221,7 @@ When running `pnpm run dev`:
 1. Portless checks if the local proxy daemon is running (and auto-starts it if needed).
 2. It claims a random, unused port (4000–4999) from the OS.
 3. It injects the port and launches `vite dev`.
-4. Your application is immediately accessible at `https://my-app.localhost`.
+4. Your application is immediately accessible at `https://my-app.localhost`. When additional tunnel TLDs are configured, `portless` automatically reads `~/.portless/proxy.tlds` and prints both `-> https://<name>.localhost` and `also -> https://<name>.<your-domain.com>`, and agents should always report all printed URLs to the user.
 
 ---
 
@@ -294,6 +294,10 @@ No configuration changes are needed; every worktree runs concurrently without po
 | **Start Proxy (Foreground)** | `portless proxy start --foreground` | Runs proxy in foreground for real-time traffic debugging. |
 | **Stop Proxy Daemon** | `portless proxy stop` | Stops the background proxy daemon. |
 | **Bypass Portless** | `PORTLESS=0 pnpm dev` | Runs the dev command directly on standard localhost. |
+
+> [!NOTE]
+> **Multi-TLD URL Reporting**:
+> When launching dev servers or inspecting active routes with `portless list`, `portless` automatically reads `~/.portless/proxy.tlds` and prints both `-> https://<name>.localhost` and `also -> https://<name>.<your-domain.com>`. Agents should always report all printed URLs to the user so both local loopback and external/tunnel endpoints are clearly surfaced.
 
 ---
 

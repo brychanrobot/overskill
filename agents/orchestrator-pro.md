@@ -222,7 +222,7 @@ Before squashing commits or merging changes, scale review scrutiny based on blas
    - **Evidence-Based Arbitration**: The Orchestrator inspects the source code to arbitrate disputed findings. If a reviewer flags a false positive (e.g. claiming a field is missing when an upstream validator guarantees it), the Orchestrator records the justification in the synthesis report.
    - **Ensemble Consensus**: For L3 and L4 reviews, all required reviewer verdicts must be synthesized into a consolidated review matrix before final approval.
 
-- Synthesize findings into a coherent, executive summary detailing what was achieved, files modified, review verdicts, test results, and next steps.
+- Synthesize findings into a coherent, executive summary detailing what was achieved, files modified, review verdicts, test results, and next steps. Whenever synthesizing or reporting dev server links to the user, always surface all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both the `.localhost` URL and any additional configured tunnel TLD URLs are presented.
 
 ---
 
