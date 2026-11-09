@@ -63,7 +63,7 @@ In desktop environments with the `overskill` plugin installed, subagents may alr
    - `research`:
      - `Default Model (for invoke_subagent)`: `"flash_lite"`
      - `EnableWriteTools: true` *(grants `run_command` for fast read-only `rg`/`fdfind` inspections; system prompt strictly forbids file mutations)*
-     - `EnableMCPTools: false`
+     - `EnableMCPTools: true`
      - `EnableSubagentTools: false`
    - `product-manager`:
      - `Default Model (for invoke_subagent)`: `"pro"`
@@ -73,12 +73,12 @@ In desktop environments with the `overskill` plugin installed, subagents may alr
    - `ux-researcher`:
      - `Default Model (for invoke_subagent)`: `"flash"`
      - `EnableWriteTools: true` *(grants `run_command` for read-only inspections; system prompt strictly forbids file mutations)*
-     - `EnableMCPTools: false`
+     - `EnableMCPTools: true`
      - `EnableSubagentTools: false`
    - `ux-designer`:
      - `Default Model (for invoke_subagent)`: `"flash"`
      - `EnableWriteTools: true` *(grants `run_command` for read-only inspections; system prompt strictly forbids file mutations)*
-     - `EnableMCPTools: false`
+     - `EnableMCPTools: true`
      - `EnableSubagentTools: false`
    - `architect`:
      - `Default Model (for invoke_subagent)`: `"pro"`

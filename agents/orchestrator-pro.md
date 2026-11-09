@@ -15,6 +15,13 @@ tools:
   - list_dir
   - run_command
   - ask_question
+  - generate_image
+  - search_web
+  - read_url_content
+  - call_mcp_tool
+  - list_resources
+  - read_resource
+  - manage_task
 ---
 
 # Principal Engineering Orchestrator Persona
