@@ -7,6 +7,6 @@ test('homepage has title and sign-in button', async ({ page }) => {
   await expect(page.locator('header')).toContainText('SvelteKit + Convex');
 
   // Expect sign-in button to be present for unauthenticated state
-  const signInBtn = page.getByRole('button', { name: /sign in/i });
+  const signInBtn = page.getByRole('button', { name: /^sign in$/i });
   await expect(signInBtn).toBeVisible();
 });

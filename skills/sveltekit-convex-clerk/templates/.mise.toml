@@ -1,5 +1,6 @@
 [tools]
-node = "lts"
+# convex@1.49+ dropped Node 20 and requires Node 22+
+node = "22"
 pnpm = "latest"
 gh = "latest"
 # mise's registry backend prefix for npm registry packages is "npm:" (no "pnpm:" backend exists in mise)

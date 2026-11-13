@@ -2,6 +2,14 @@
 
 Official Documentation Index: https://vercel.com/docs/llms.txt
 
+## Runtime Prerequisites
+
+> [!IMPORTANT]
+> **Node.js 22.x Runtime Prerequisite (`convex@1.49+`)**:
+> `convex@1.49+` dropped support for Node.js 20 and strictly requires **Node.js 22+**. Before deploying:
+> 1. In **Vercel Project Settings** $\to$ **General** $\to$ **Node.js Version**, ensure the runtime is set to **`22.x`** (or newer).
+> 2. Ensure `package.json` contains `"engines": { "node": ">=22" }` so Vercel build runners automatically select Node.js 22.
+
 ## Headless CLI Deployment Workflow
 
 1. **Authentication Check**:

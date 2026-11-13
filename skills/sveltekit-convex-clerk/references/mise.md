@@ -3,7 +3,7 @@
 [`mise`](https://mise.jdx.dev) (formerly `rtx`) is a fast, polyglot tool version and environment manager written in Rust. It installs toolchains in user space (`~/.local/share/mise` and `~/.local/bin`) without needing `sudo` or system package manager privileges.
 
 In the `sveltekit-convex-clerk` workflow, `mise` is the recommended mechanism for installing and pinning runtime tools:
-- **`node`** (Node.js LTS, e.g. 20.x or 22.x)
+- **`node`** (Node.js 22+, e.g. 22.x or newer; required by `convex@1.49+` which dropped Node 20)
 - **`pnpm`** (Strict package manager)
 - **`gh`** (GitHub CLI for repository creation and auth)
 - **`portless`** (Local development domain proxy and automatic port allocator for `<project-name>.localhost`)
@@ -182,7 +182,7 @@ eval "$(mise activate bash)"   # or: eval "$(mise activate zsh)"
 Verify versions:
 
 ```bash
-node -v   # e.g. v22.x.x
+node -v   # e.g. v22.x.x (Node 22+ required by convex@1.49+)
 pnpm -v   # e.g. 10.x.x or 9.x.x
 gh --version
 portless --version
@@ -212,7 +212,7 @@ Place a `.mise.toml` file in the project root to guarantee that all developers a
 
 ```toml
 [tools]
-node = "lts"
+node = "22" # convex@1.49+ requires Node 22+ (Node 20 dropped)
 pnpm = "latest"
 gh = "latest"
 # mise's registry backend prefix for npm registry packages is "npm:" (no "pnpm:" backend exists in mise)
