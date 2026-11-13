@@ -145,35 +145,97 @@ CLERK_SECRET_KEY=sk_test_...
 
 ---
 
-## Clerk CLI (`pnpm dlx clerk`)
+## Setup Workflows: CLI Automation vs. Manual Dashboard
 
-Manage Clerk authentication directly from your terminal using the Clerk CLI:
+Clerk can be provisioned and configured either headlessly via the Clerk CLI (`pnpm dlx clerk`) or through click-by-click instructions in the Clerk Dashboard.
+
+### Option A: Fast Terminal Setup with Clerk CLI (`pnpm dlx clerk`)
+
+For automated, terminal-driven setup:
 
 ```bash
-# Authenticate CLI session
+# 1. Authenticate CLI session or initialize accountless dev instance
 pnpm dlx clerk auth login
+# Alternatively, initialize an interactive or accountless dev project:
+pnpm dlx clerk init
 
-# Check authentication and linked project
+# 2. Check active user session and linked project
 pnpm dlx clerk whoami
 
-# Check integration health
-pnpm dlx clerk doctor
-
-# List available Clerk apps
+# 3. List available Clerk applications
 pnpm dlx clerk apps list --json
 
-# Create Convex JWT template with aud: "convex"
+# 4. Create mandatory 'convex' JWT template with aud: "convex"
 pnpm dlx clerk api jwt_templates create \
   --name convex \
   --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
 
-# Deploy to production
+# 5. Verify Clerk integration health
+pnpm dlx clerk doctor
+
+# 6. Test or forward webhooks (when integrating event webhooks)
+pnpm dlx clerk webhooks
+
+# 7. Deploy settings to production
 pnpm dlx clerk deploy
 ```
 
-> [!IMPORTANT]
-> **Audience Claim (`aud: "convex"`)**:
-> Convex token verification explicitly checks that the JWT contains `applicationID: "convex"` matching `convex/auth.config.ts`. If the JWT template does not specify `"aud": "convex"`, Convex will treat all client requests as unauthenticated.
-
 > [!NOTE]
 > Strictly avoid `npx clerk`. In accordance with `overskill` rules, always use `pnpm dlx clerk`.
+
+---
+
+### Option B: Click-by-Click Guide in Clerk Dashboard (For Non-SWEs)
+
+Guide non-SWE creators and users with clear, friendly steps in their browser:
+
+1. **Create Clerk Application**:
+   - Open [https://dashboard.clerk.com](https://dashboard.clerk.com) in your browser.
+   - Click **Add application** (or **Create application**), name your application, and select authentication providers (e.g. Google, Email/Password).
+   - Click **Create Application**.
+2. **Retrieve API Keys**:
+   - In the **API Keys** section, copy the **Publishable Key** (starts with `pk_test_...`) and the **Secret Key** (starts with `sk_test_...`).
+   - Paste them into your local `.env.local` file:
+     ```env
+     PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+     CLERK_SECRET_KEY=sk_test_...
+     ```
+3. **Configure the Convex JWT Template**:
+   - On the left sidebar in Clerk Dashboard, click **JWT Templates**.
+   - Click **New Template** $\to$ select the pre-built **Convex** template.
+   - Verify the template name is `convex` and the **Audience** (`aud`) field is set to `convex`.
+   - Save the template.
+4. **Copy Frontend API URL & Configure Convex**:
+   - Copy the **Issuer** / **Frontend API URL** from the template (looks like `https://verb-noun-00.clerk.accounts.dev`).
+   - Configure it on your Convex deployment:
+     ```bash
+     pnpm convex env set CLERK_FRONTEND_API_URL <user-fapi-url>
+     ```
+
+---
+
+## Troubleshooting & Common Pitfalls
+
+### 1. Convex Queries Reject with `Unauthenticated` Despite Being Signed In
+- **Symptom**: The client UI displays `<SignedIn>` content, `clerk.user` is populated, but Convex mutations and queries throw `Error: Unauthenticated` or `ctx.auth.getUserIdentity()` returns `null`.
+- **Root Cause**:
+  1. **Missing `"aud": "convex"` Claim**: `convex/auth.config.ts` declares `applicationID: 'convex'`. Convex validates that the incoming JWT includes `"aud": "convex"`. If the JWT template was created without this claim, Convex rejects the token.
+  2. **Mismatched Issuer URL**: The `domain` specified in `convex/auth.config.ts` does not match the Clerk Frontend API URL set via `CLERK_FRONTEND_API_URL`.
+- **Resolution**:
+  1. Ensure the template has `"aud": "convex"`:
+     ```bash
+     pnpm dlx clerk api jwt_templates create \
+       --name convex \
+       --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
+     ```
+     Or in Clerk Dashboard $\to$ **JWT Templates** $\to$ **convex**, verify the Claims editor includes `"aud": "convex"`.
+  2. Confirm the environment variable is set on Convex:
+     ```bash
+     pnpm convex env set CLERK_FRONTEND_API_URL https://<your-fapi-url>.clerk.accounts.dev
+     ```
+
+### 2. Svelte Context Boundary Constraint (`useClerkContext`)
+- **Symptom**: `TypeError: Cannot read properties of undefined (reading 'session')` or runtime error during root layout initialization.
+- **Root Cause**: Calling `useClerkContext()` inside the `<script>` of `src/routes/+layout.svelte` where `<ClerkProvider>` is rendered. `<ClerkProvider>` sets the context inside its own component lifecycle.
+- **Resolution**: Always call `useClerkContext()` in a child descendant component (such as `src/lib/components/ConvexAuth.svelte`), rendered as a child of `<ClerkProvider>`.
+

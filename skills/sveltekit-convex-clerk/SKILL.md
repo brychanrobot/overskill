@@ -5,1559 +5,290 @@ description: Scaffolds, configures, wires, creates a GitHub repository for, and 
 
 # SvelteKit Full-Stack Pipeline (Vite + Tailwind v4 + Convex + Clerk + Biome + Vitest + Playwright + Vercel)
 
-This skill provides an automated, end-to-end recipe for scaffolding, wiring, and deploying a modern full-stack web application. It enforces strict architectural and tooling constraints to guarantee speed, reactivity, code quality, automated testing, and reliable deployments.
+This skill provides an automated, end-to-end orchestration runbook for scaffolding, wiring, and deploying a modern full-stack web application. It enforces strict architectural and tooling constraints for high velocity, reactivity, code quality, automated testing, and zero-defect production deployments.
 
 ## Architecture & Technology Stack
 
-| Layer | Technology | Key Capabilities / Rules |
+| Layer | Technology | Key Capabilities & Rules |
 | :--- | :--- | :--- |
-| **Toolchain & CLI Runtime** | [`mise`](https://mise.jdx.dev) (Recommended) | Fast toolchain manager in `~/.local/bin`. Installs and manages `node` (Node 22+ required; `convex@1.49+` dropped Node 20), `pnpm`, `gh`, and `portless` in user space without sudo. |
-| **Local Proxy & Portless Domains** | [Portless](https://github.com/vercel-labs/portless) | **MANDATORY**: Maps `https://<project-name>.localhost` and subdomains `https://<endpoint>.<project-name>.localhost` to local services, auto-allocating ephemeral ports (4000–4999) without port collisions. |
+| **Toolchain & Runtime** | [`mise`](https://mise.jdx.dev) | User-space toolchain manager in `~/.local/bin`. Pins Node 22+ (`convex@1.49+` dropped Node 20), `pnpm`, `gh`, `portless`. |
+| **Local Proxy & Domains** | [Portless](https://github.com/vercel-labs/portless) | **MANDATORY**: Maps `https://<project-name>.localhost` and subdomains via ephemeral ports without collisions. |
 | **Framework & UI** | [SvelteKit](https://svelte.dev) + TypeScript | Modern Svelte 5 runes (`$state`, `$derived`, `$effect`, `Snippet`, `{@render}`), minimal template. |
 | **Build Engine & Bundler** | [Vite](https://vite.dev) (`vite.config.ts`) | Instant HMR dev server, official `@tailwindcss/vite` compiler plugin, Vitest runner, production SSR bundling. |
-| **Styling & UI Components** | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn-svelte](https://shadcn-svelte.com) | `@tailwindcss/vite`, CSS-first design system, accessible Bits UI component primitives, dark mode ready. |
-| **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Fast, space-efficient, deterministic. **FORBIDDEN: NEVER use `npx`, `npm`, `yarn`, or `bun`. Use ONLY `pnpm dlx` for ad-hoc execution and `pnpm <cmd>` for project packages.** |
-| **Code Quality** | [Biome](https://biomejs.dev) (`@biomejs/biome`) | Unified Rust-powered linter and formatter. **STRICTLY NO** ESLint or Prettier. |
-| **Testing** | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) | Unit, component, and in-memory Convex testing via Vitest; robust E2E testing via Playwright. |
-| **Database & Realtime** | [Convex](https://convex.dev) (`convex@1.49+`, `convex-svelte@0.15.1`) | Real-time reactive queries over WebSocket, TypeScript schema, universal SSR prefetching (`convexLoad`), server functions. Strictly requires Node 22+. |
-| **Authentication** | [Clerk](https://clerk.com) (`svelte-clerk`) | Secure auth, JWT session templates, reactive runes, prebuilt UI controls. |
+| **Styling & Components** | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn-svelte](https://shadcn-svelte.com) | `@tailwindcss/vite`, CSS-first design system, accessible Bits UI primitives, dark-mode ready. |
+| **Package Manager** | Strict [`pnpm`](https://pnpm.io) | Deterministic & fast. **FORBIDDEN: NEVER use `npx`, `npm`, `yarn`, or `bun`. Use ONLY `pnpm dlx` or `pnpm <cmd>`.** |
+| **Code Quality** | [Biome](https://biomejs.dev) (`@biomejs/biome`) | Unified Rust-powered linter & formatter. **STRICTLY NO** ESLint or Prettier. |
+| **Testing** | [Vitest](https://vitest.dev) + [Playwright](https://playwright.dev) | Unit sanity & component testing via Vitest; robust E2E browser automation via Playwright. |
+| **Database & Realtime** | [Convex](https://convex.dev) (`convex@1.49+`, `convex-svelte@0.15.1`) | Real-time reactive queries over WebSocket, TypeScript schema, universal SSR prefetching (`convexLoad`). Requires Node 22+. |
+| **Authentication** | [Clerk](https://clerk.com) (`svelte-clerk`) | Secure auth, JWT session templates (`"aud": "convex"`), reactive runes, prebuilt UI controls. |
 | **VCS & Hosting** | [GitHub CLI](https://cli.github.com) + [Vercel](https://vercel.com) | Automated repository creation (`gh repo create`) and headless zero-config deployments (`vercel --prod`). |
 
----
-
-## Non-SWE Friendly Principles & Agent Communication
-
-When executing this skill for non-software engineers, solo creators, or beginners, you MUST adhere to these conversational rules:
-
-1. **Zero Jargon & No Raw Stack Traces**:
-   - **Never** paste raw compiler errors, TypeScript codes (e.g. `TS2322`), or stack traces into the chat.
-   - Fix issues silently and autonomously. If user input is needed, speak in plain, reassuring English (*"I noticed a small layout alignment issue while testing your page, and I'm updating it now."*).
-2. **Interactive Idea-to-App Modeling**:
-   - Do **NOT** assume the user only wants a generic todo list.
-   - Ask them in plain English what their app is about, and automatically customize the Convex schema, mutations, queries, and Svelte UI for their specific idea (recipes, book logs, trip planners, habits, etc.).
-3. **Click-by-Click Guidance for Keys**:
-   - Guide the user step-by-step with direct clickable links when setting up Clerk and Convex. Never use terms like "JWT issuer domain" without explaining where to click.
-4. **Milestone Celebrations & Clickable Links**:
-   - Always present a clickable local preview link using Portless: `https://<project-name>.localhost` (with subdomains `https://<endpoint>.<project-name>.localhost` for auxiliary endpoints), keeping all services tidy without port collisions. Whenever starting or reporting a Portless dev server, always present all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both `https://<project-name>.localhost` and any configured tunnel TLD links (`https://<project-name>.<your-domain.com>`) are surfaced.
-   - Always present the live mobile-friendly Vercel production link: `https://<app>.vercel.app` with instructions on how to test logging in on their phone.
-5. **Proactive Toolchain Setup Offer with `mise`**:
-   - If `node`, `pnpm`, `gh`, or `portless` are missing, never fail or leave the user stranded with a missing command error.
-   - Gently offer to set up the entire toolchain using `mise` in `~/.local/bin` (`node = "22"` or `node@latest` 22+, `pnpm@latest`, `gh@latest`, `npm:portless@latest`, `caddy@latest`, `cloudflared@latest` — no sudo or admin privileges required; `convex@1.49+` strictly requires Node 22+).
-6. **Strictly Forbid `npx` (Only `pnpm dlx`)**:
-   - **Never** invoke or suggest `npx`. All one-off CLIs must run via `pnpm dlx` (e.g., `pnpm dlx sv create`, `pnpm dlx vercel whoami`, `pnpm dlx convex dev`). Project packages run via `pnpm <command>`.
-7. **Mandatory Portless Local Routing (`<project-name>.localhost` & Subdomains)**:
-   - **Require Portless** for local development. Integrated directly into `package.json` (`"dev": "portless run vite dev"` or `"portless": { "name": "<project-name>", "script": "dev:app" }`).
-   - The primary application endpoint must be served at `https://<project-name>.localhost` over automatic HTTPS with trusted local CA.
-   - Auxiliary services (e.g. backend API, preview server, websocket server) **must** use dedicated subdomains: `https://<endpoint>.<project-name>.localhost` (e.g. `api.<project-name>.localhost`, `preview.<project-name>.localhost`).
-   - Under RFC 6761, `*.localhost` domains natively resolve to loopback (`127.0.0.1`) without editing `/etc/hosts` or needing elevated privileges.
-   - Ephemeral ports (4000–4999) are allocated dynamically by the OS kernel and auto-injected into Vite, eliminating port collisions across concurrent projects without hardcoded port numbers.
-   - Never expose raw colliding port numbers (`:5173`, `:5174`, `:3000`) or rely on raw `localhost:<port>` where cookies and local storage collide across different apps.
-8. **Remote & Multi-Device Testing Strategy (Cloudflare Tunnels vs. Tailscale)**:
-   - When the user wants to test on a physical mobile device (phone, tablet), share an active local dev server with collaborators, or receive external webhook deliveries (e.g. Clerk webhooks, Stripe events), **ask the user which remote exposure model they prefer**:
-     1. **Cloudflare Tunnel with Custom Domain** (Recommended: provides clean `https://<project-name>.<your-domain.com>` URLs with trusted public SSL and zero client app installation on mobile devices).
-     2. **Tailscale Sharing** (`--tailscale` for private tailnet or `--funnel` for public access).
-     3. **Localhost Only** (`.localhost` loopback via RFC 6761).
-   - **Strict Domain Privacy Rule**: Never commit or publish private custom domains to git repositories or shared skill files. Always use `<your-domain.com>` in shared documentation and configure actual domains via local environment variables (`PORTLESS_TLD`) and local daemon settings.
+### Non-Negotiable Guardrails
+1. **Node.js 22+ Runtime**: `convex@1.49+` dropped support for Node 20. Strictly enforce Node 22+ across `.mise.toml`, `package.json` (`"engines": { "node": ">=22" }`), and Vercel build settings.
+2. **Strict Package Toolchain**: NEVER invoke `npx`, `npm`, `yarn`, or `bun`. Use ONLY `pnpm dlx <pkg>` for CLI tools and `pnpm <cmd>` for project packages.
+3. **Mandatory Portless Routing**: Local dev servers MUST be served under `https://<project-name>.localhost` (and `https://<endpoint>.<project-name>.localhost` for subdomains) via Portless. Never expose raw localhost ports.
+4. **Svelte 5 Runes Only**: Never use deprecated Svelte 4 syntax (`export let`, `$:`, `<slot />`). Use `$state`, `$derived`, `$effect`, and `{@render}` snippets.
+5. **Clerk Context Boundary**: NEVER call `useClerkContext()` inside the `<script>` of root `+layout.svelte`. Delegate client auth bridging to descendant component `src/lib/components/ConvexAuth.svelte` using `setupAuth()`, awaiting `clerkReady` for `initialState`.
+6. **Direct Query Property Access**: In `convex-svelte@0.15.1`, queries are reactive rune objects, NOT stores. NEVER use `$tasks.*` or `$query.*` store syntax. Access properties directly: `tasks.isLoading`, `tasks.data`, `tasks.error`.
+7. **Non-SWE Plain-English Protocol**: Never surface raw stack traces or TypeScript error codes. Interview the user on their app idea, guide key setups click-by-click, and celebrate milestones with clickable links.
 
 ---
 
-## Live Documentation Freshness Protocol (MANDATORY)
+## Companion Resources Index
 
-To prevent code staleness and API drift across fast-moving frameworks (Svelte 5, Tailwind CSS v4, Convex, Clerk), agents **MUST** actively consult official machine-readable agent documentation endpoints (`llms.txt`, markdown documentation feeds, and official skills) rather than relying solely on training weights or static memory.
+Verbose boilerplate files and deep-dive technical guides are modularized into `templates/` and `references/`.
 
-### Relationship Between Templates & Live Documentation
-- **Templates in `templates/`**: Provide proven baseline scaffolding and fail-safe fixes for known environment gotchas (e.g. Playwright dev server reuse preventing `500 ENOENT: stat $types.d.ts`, Tailwind v4 `hsl(...)` color wrappers preventing Clerk modal transparency, and strict `pnpm dlx` enforcement). Use them for project initialization.
-- **Live Upstream Documentation**: The **authoritative source of truth** for all project-specific schema designs, function signatures, Svelte 5 runes, and service integrations. Before implementing novel features, complex queries, or custom auth logic, fetch the relevant live endpoint via `read_url_content` or HTTP GET.
+### Templates (24 Files)
 
-### Official Upstream Agent Endpoints
-
-| Framework / Service | Live Endpoint / Resource | Purpose & When to Fetch |
+| Template File | Target Destination | Purpose |
 | :--- | :--- | :--- |
-| **Svelte 5 Runes & Core** | [`https://svelte.dev/docs/svelte/llms.txt`](https://svelte.dev/docs/svelte/llms.txt) | Fetch before authoring component reactivity (`$state`, `$derived`, `$effect`, snippets). Never use deprecated Svelte 4 syntax (`export let`, `$:`, `<slot />`). |
-| **SvelteKit** | [`https://svelte.dev/docs/kit/llms.txt`](https://svelte.dev/docs/kit/llms.txt) | Fetch when writing server loaders (`+layout.server.ts`, `+page.server.ts`), form actions, server hooks, or routing logic. |
-| **Svelte CLI (`sv`)** | [`https://svelte.dev/docs/cli/llms.txt`](https://svelte.dev/docs/cli/llms.txt) | Fetch for official `sv add` and `sv create` flags and options. |
-| **Convex Database & API** | [`https://docs.convex.dev/llms.txt`](https://docs.convex.dev/llms.txt)<br>Append `.md` to any doc URL (e.g. `https://docs.convex.dev/<path>.md`) | Fetch the index, then retrieve specific topic markdown (e.g. `https://docs.convex.dev/database/reading-data/indexes.md`, `https://docs.convex.dev/client/svelte/overview.md`). |
-| **Convex Agent Skills** | [`https://github.com/get-convex/agent-skills`](https://github.com/get-convex/agent-skills) | Official Convex skills for agents (`/convex-docs`, `/convex-authz`, `/convex-design`, `/convex-test`, `/convex-reviewer`). |
-| **Clerk Single-File Runbook** | [`https://clerk.com/SKILL.md`](https://clerk.com/SKILL.md) | Canonical single-file agent guide for wiring Clerk SDKs, auth flows, and configurations. |
-| **Clerk Skills Repository** | [`https://github.com/clerk/skills`](https://github.com/clerk/skills) | Official modular Clerk skills (`clerk-setup`, `clerk-cli`, `clerk-custom-ui`, `clerk-backend-api`). |
-| **Vercel** | [`https://vercel.com/docs/llms.txt`](https://vercel.com/docs/llms.txt) | Machine-readable index for Vercel CLI, deployment configurations, and project settings. |
-| **shadcn-svelte** | [`https://shadcn-svelte.com/docs`](https://shadcn-svelte.com/docs) | Bits UI primitives, component additions via `pnpm dlx shadcn-svelte@latest add <component>`. |
-| **Biome Standards** | [`https://biomejs.dev/`](https://biomejs.dev/) | Biome linter, formatter, and configuration reference. |
-| **Mise Documentation** | [`https://mise.jdx.dev`](https://mise.jdx.dev) | Polyglot toolchain runtime manager for `~/.local/bin`. |
+| [`templates/.mise.toml`](templates/.mise.toml) | `.mise.toml` | Toolchain pinning (Node 22, pnpm, gh, portless) |
+| [`templates/svelte.config.js`](templates/svelte.config.js) | `svelte.config.js` | Adapter-auto, vitePreprocess, and `$convex` path alias |
+| [`templates/vite.config.ts`](templates/vite.config.ts) | `vite.config.ts` | Vite build config with `@tailwindcss/vite` & Vitest |
+| [`templates/app.d.ts`](templates/app.d.ts) | `src/app.d.ts` | Ambient TypeScript declarations and Clerk locals |
+| [`templates/app.css`](templates/app.css) | `src/app.css` | Tailwind v4 theme & `hsl(...)` color wrappers for shadcn/Clerk |
+| [`templates/components.json`](templates/components.json) | `components.json` | shadcn-svelte CLI registry & path configuration |
+| [`templates/biome.json`](templates/biome.json) | `biome.json` | Unified Biome v1.9.4 linter & formatter configuration |
+| [`templates/convex-schema.ts`](templates/convex-schema.ts) | `convex/schema.ts` | Convex database schema with table definitions & indexes |
+| [`templates/convex-tasks.ts`](templates/convex-tasks.ts) | `convex/tasks.ts` | Authenticated queries and mutations with `ctx.auth` |
+| [`templates/convex-auth.config.ts`](templates/convex-auth.config.ts) | `convex/auth.config.ts` | Convex auth provider config matching Clerk with audience `"convex"` |
+| [`templates/hooks.ts`](templates/hooks.ts) | `src/hooks.ts` | Universal client/server hooks (`transport` & `initConvex`) |
+| [`templates/hooks.server.ts`](templates/hooks.server.ts) | `src/hooks.server.ts` | Server hooks sequence with Clerk & `withServerConvexToken` |
+| [`templates/layout.server.ts`](templates/layout.server.ts) | `src/routes/+layout.server.ts` | Root server loader returning `isAuthenticated` & `buildClerkProps` |
+| [`templates/ConvexAuth.svelte`](templates/ConvexAuth.svelte) | `src/lib/components/ConvexAuth.svelte` | Descendant auth bridge using `setupAuth()`, `clerkReady`, `initialState` |
+| [`templates/layout.svelte`](templates/layout.svelte) | `src/routes/+layout.svelte` | Root layout with `setupConvex()`, `<ClerkProvider>`, `<ConvexAuth>` |
+| [`templates/page.ts`](templates/page.ts) | `src/routes/+page.ts` | Universal route loader prefetching query via `convexLoad` |
+| [`templates/page.svelte`](templates/page.svelte) | `src/routes/+page.svelte` | Reactive UI consuming queries via direct rune property access |
+| [`templates/unit.test.ts`](templates/unit.test.ts) | `src/demo.test.ts` | Baseline Vitest unit sanity test |
+| [`templates/demo.spec.ts`](templates/demo.spec.ts) | `e2e/demo.test.ts` | Playwright E2E smoke test verifying page and auth elements |
+| [`templates/playwright.config.ts`](templates/playwright.config.ts) | `playwright.config.ts` | Playwright test config with `reuseExistingServer: true` |
+| [`templates/env.example`](templates/env.example) | `.env.example` | Environment variable reference template for Convex & Clerk |
+| [`templates/LICENSE.mit`](templates/LICENSE.mit) | `LICENSE` | Standard MIT open-source license template |
+| [`templates/create-test-user.ts`](templates/create-test-user.ts) | `scripts/create-test-user.ts` | Clerk Backend API script provisioning test users with auth tickets |
+| [`templates/record-demo.ts`](templates/record-demo.ts) | `scripts/record-demo.ts` | Automated Playwright walkthrough recorder & animated GIF generator |
 
+### References (11 Files)
+
+| Reference File | Focus | When to Read |
+| :--- | :--- | :--- |
+| [`references/mise.md`](references/mise.md) | Polyglot runtime management | Missing developer tools, PATH setup, or `prefer_offline = true` |
+| [`references/portless.md`](references/portless.md) | Local proxy & domain routing | Portless setup, custom subdomains, Cloudflare Tunnels, Tailscale |
+| [`references/sveltekit.md`](references/sveltekit.md) | SvelteKit SSR & architecture | Server hooks sequencing, `$convex` alias, load function contracts |
+| [`references/convex.md`](references/convex.md) | Convex database & `convex-svelte` | `convex-svelte@0.15.1`, `convexLoad`, SSR prefetching, Node 22+ |
+| [`references/clerk.md`](references/clerk.md) | Clerk authentication & JWT templates | Context boundaries, `"aud": "convex"` claim, Backend API tokens |
+| [`references/tailwind-and-shadcn.md`](references/tailwind-and-shadcn.md) | Tailwind v4 & shadcn-svelte | `@tailwindcss/vite`, CSS design system, `hsl(...)` color wrappers |
+| [`references/biome.md`](references/biome.md) | Biome linting & formatting | Replacing ESLint/Prettier, Biome v1.9.4 rules, package scripts |
+| [`references/testing.md`](references/testing.md) | Vitest & Playwright testing | Unit/E2E test setup, dev server reuse, avoiding test hangs |
+| [`references/playwright-walkthroughs.md`](references/playwright-walkthroughs.md) | Visual proof & demo recording | Playwright CLI probing, session saving, high-definition GIF recording |
+| [`references/vercel.md`](references/vercel.md) | Headless Vercel deployment | Vercel CLI deployment, Node 22.x engine setting, env synchronization |
+| [`references/non-swe-guide.md`](references/non-swe-guide.md) | Plain-English user communication | Idea interview, zero-jargon communication, milestone celebrations |
+
+> [!NOTE]
+> **Standalone Raw-URL Fallback**: If consuming `SKILL.md` directly via raw URL without cloning the repository, fetch sibling files from:
+> `https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/<templates|references>/<filename>`
 
 ---
 
-## Execution Workflow
+## Live Documentation Freshness Protocol
+
+Consult upstream machine-readable documentation endpoints before implementing novel features:
+
+| Framework / Service | Live Upstream Endpoint | Purpose |
+| :--- | :--- | :--- |
+| **Svelte 5 Runes** | `https://svelte.dev/docs/svelte/llms.txt` | Core reactivity, runes (`$state`, `$derived`, `$effect`), snippets |
+| **SvelteKit** | `https://svelte.dev/docs/kit/llms.txt` | Loaders, server hooks, routing, form actions |
+| **Svelte CLI (`sv`)** | `https://svelte.dev/docs/cli/llms.txt` | Scaffolding flags, official add-ons |
+| **Tailwind CSS v4** | `https://tailwindcss.com/docs` | CSS-first configuration, theme variables |
+| **shadcn-svelte** | `https://shadcn-svelte.com/docs` | Bits UI component primitives, CLI add commands |
+| **Convex Realtime** | `https://docs.convex.dev/llms.txt` *(append `.md` to doc URLs)* | Schema definitions, reactive queries, mutations, `convex-svelte` |
+| **Clerk Auth** | `https://clerk.com/SKILL.md` | Single-file agent runbook for Clerk SDKs & JWT templates |
+| **Vercel** | `https://vercel.com/docs/llms.txt` | CLI deployment, project settings, environment variables |
+| **Biome** | `https://biomejs.dev/` | Linter rules, formatter options, CI commands |
+| **Mise** | `https://mise.jdx.dev` | User-space toolchain management |
+
+---
+
+## Execution Runbook (Steps 1–9)
 
 ```mermaid
-flowchart TD
-    S1["1. Toolchain & Idea Discovery"] --> S2["2. Scaffolding Automation (sv + Tailwind v4 + Biome)"]
-    S2 --> S3["3. Testing Setup (Vitest + Playwright)"]
-    S3 --> S4["4. UI Components Setup (shadcn-svelte)"]
-    S4 --> S5["5. Backend & Custom Schema (Convex)"]
-    S5 --> S6["6. Reactive UI & Auth Wiring (Clerk + Svelte 5)"]
-    S6 --> S7["7. Local Verification & Visual Proof (Screenshots + GIF)"]
-    S7 --> S8["8. Remote GitHub Repo Creation & Licensing"]
-    S8 --> S9["9. Production Deployment & Live Phone Link (Vercel)"]
+flowchart LR
+    S1["1. Toolchain & Idea"] --> S2["2. Scaffolding"] --> S3["3. Quality & Tests"]
+    S3 --> S4["4. Convex Backend"] --> S5["5. Clerk & Svelte 5"] --> S6["6. Provision & Auth"]
+    S6 --> S7["7. Git & GitHub"] --> S8["8. Vercel Deploy"] --> S9["9. Celebration"]
 ```
-
----
 
 ### Step 1: System Prerequisites & Idea Discovery
-
-#### 1. Toolchain & CLI Availability Check (Node 22+, pnpm, gh, portless with mise)
-Verify that the core runtime tools (`node`, `pnpm`, `gh`, `portless`) are installed on the host and that Node satisfies the **Node 22+** requirement:
-
-```bash
-# Check presence and versions of required toolchains
-command -v node
-node -v # Strictly requires Node 22+ (convex@1.49+ dropped Node 20)
-command -v pnpm
-command -v gh
-command -v portless
-
-# Verify Portless CA certificate trust
-portless doctor
-```
-
-> [!IMPORTANT]
-> **Node.js 22+ Runtime Prerequisite (`convex@1.49+`)**:
-> `convex@1.49+` dropped support for Node.js 20 and strictly requires **Node.js 22+** (e.g. 22.x LTS or newer). Ensure local toolchains (`mise`), project `package.json` (`"engines": { "node": ">=22" }`), and deployment targets (e.g. Vercel Node.js version) are configured for Node 22+.
-
-##### Project Toolchain Pinning (`.mise.toml`)
-
-Place a `.mise.toml` in the project root to guarantee all developers and agents use matching versions:
-
-```toml
-[tools]
-# convex@1.49+ dropped Node 20 and requires Node 22+
-node = "22"
-pnpm = "latest"
-gh = "latest"
-# mise's registry backend prefix for npm registry packages is "npm:" (no "pnpm:" backend exists in mise)
-"npm:portless" = "latest"
-```
-
-> [!IMPORTANT]
-> **Proactive Toolchain Setup Offer with `mise` & `portless`**:
-> If any of these tools (`node`, `pnpm`, `gh`, or `portless`) are missing or Node is older than 22, the agent MUST offer to set up the toolchain automatically using `mise` in `~/.local/bin`:
-> > *"I noticed some required tools ([missing tools, e.g. Node.js 22+, pnpm, GitHub CLI, or Portless]) aren't installed yet. Would you like me to install them for you automatically using **mise** in `~/.local/bin`? It's fast, doesn't require administrator/sudo access, and keeps everything cleanly in your user directory."*
->
-> If the user accepts (or in autonomous agent mode), execute the automated setup script [`scripts/setup-mise.sh`](references/mise.md#1-automated-idempotent-setup-scriptssetup-misesh):
-> ```bash
-> # 1. Run the bundled setup script (or: curl -fsSL https://raw.githubusercontent.com/brychanrobot/overskill/main/scripts/setup-mise.sh | bash)
-> bash scripts/setup-mise.sh
->
-> # 2. Ensure ~/.local/bin and mise shims are available in PATH
-> export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
->
-> # 3. Activate mise for the current shell session
-> eval "$("$HOME/.local/bin/mise" activate bash)"
->
-> # 4. If local CA is not yet trusted, prompt the user to initialize it:
-> # portless trust
-> # (On Linux Chrome/Chromium, import into NSS databases for native and Flatpak Chrome:
-> #  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem"
-> #  [ -d "$HOME/.var/app/com.google.Chrome/data/pki/nssdb" ] && certutil -d sql:$HOME/.var/app/com.google.Chrome/data/pki/nssdb -A -t "C,," -n "portless Local CA" -i "$HOME/.portless/ca.pem")
-> #
-> # 5. Start the background proxy daemon or install system startup service:
-> # (On Fedora/RHEL with SELinux, allowlist Node first:
-> #  sudo semanage fcontext -a -t bin_t "$HOME/\.local/share/mise/installs/node/[^/]*/bin/node"
-> #  sudo restorecon -v -R "$HOME/.local/share/mise/installs/node")
-> # portless service install   # or: portless proxy start
-> ```
->
-> > [!WARNING]
-> > **Why `prefer_offline = true` in `~/.config/mise/config.toml` is Mandatory**:
-> > When pinning tools to `"latest"`, `mise` defaults to `prefer_offline = false`. Whenever the remote version cache expires and a newer version exists upstream, shims attempt to invoke the uninstalled upstream release and crash with `mise ERROR <tool> is not a valid shim`. In addition, running `mise use <npm-tool>` fails during internal offline dependency checks with `failed to resolve configured install dependency 'node@latest' ... while offline`.
-> >
-> > Always ensure `~/.config/mise/config.toml` includes `prefer_offline = true` (configured automatically by `scripts/setup-mise.sh` or via `mise settings set prefer_offline true`). This guarantees commands and shims resolve instantly to the highest locally installed version, while `mise upgrade` continues fetching new releases.
-
-#### 2. Verify Developer CLI Authentication States
-Before creating any files, verify that local developer CLI tools are authenticated and available.
-**STRICT RULE: NEVER USE `npx`. ALWAYS USE `pnpm dlx`!**
-
-```bash
-# 1. Verify GitHub CLI authentication
-gh auth status
-
-# 2. Verify pnpm is installed and check version
-pnpm --version
-
-# 3. Verify Vercel CLI is authenticated (FORBIDDEN: NEVER use npx vercel)
-pnpm dlx vercel whoami
-
-# 4. Verify Convex CLI is authenticated (FORBIDDEN: NEVER use npx convex)
-pnpm dlx convex whoami
-
-# 5. Verify Clerk CLI is authenticated (FORBIDDEN: NEVER use npx clerk)
-pnpm dlx clerk whoami
-```
-
-> [!IMPORTANT]
-> If any tool reports unauthenticated status, assist the user calmly:
-> - For GitHub: Run `gh auth login`
-> - For Vercel: Run `pnpm dlx vercel login` (FORBIDDEN: never `npx vercel login`)
-> - For Convex: Run `pnpm dlx convex login` (FORBIDDEN: never `npx convex login`)
-> - For Clerk: Run `pnpm dlx clerk auth login` (FORBIDDEN: never `npx clerk login`)
-
-#### 3. The Idea Interview (For Non-SWEs & Creators)
-Ask the user in plain English what they would like to build:
-> *"What kind of app would you like to build today, and what kinds of things do you want people to save, view, or track?"*
-
-Common examples to inspire them:
-- **Recipe Box**: Save family recipes, ingredients, and cooking times.
-- **Reading Journal**: Track books, ratings, favorites, and notes.
-- **Habit or Workout Tracker**: Daily logs, checklists, and streaks.
-- **Trip Planner**: Itineraries, packing lists, and locations.
-
-**Agent Action**: Take their plain-English description and design the Convex schema, mutations, queries, and Svelte UI for *their specific idea* rather than just a generic todo list!
-
----
-
-### Step 2: Scaffolding Automation (SvelteKit + Tailwind CSS v4 + Vitest + Playwright)
-
-#### 1. Scaffold SvelteKit Project & Official Add-ons
-
-Initialize a minimal SvelteKit project with TypeScript using Svelte's official CLI (`sv`) via `pnpm dlx`, and install official add-ons for **Tailwind CSS v4**, **Vitest**, and **Playwright**:
-
-```bash
-# 1. Run SvelteKit scaffolding inside the project root
-pnpm dlx sv create . --template minimal --types ts --no-add-ons
-
-# 2. Add Tailwind CSS v4, Vitest, and Playwright using official sv add-ons
-pnpm dlx sv add tailwindcss vitest="usages:unit,component" playwright --install pnpm
-
-# 3. Install Playwright browser engines
-pnpm exec playwright install --with-deps chromium
-```
-
-#### 2. Configure SvelteKit & Path Aliases: `svelte.config.js`
-
-Update `svelte.config.js` to define the `$convex` alias mapping to the `convex/` directory. This ensures clean, type-safe imports like `import { api } from '$convex/_generated/api';` across loaders and components:
-
-```javascript
-// svelte.config.js
-import adapter from '@sveltejs/adapter-auto';
-import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-
-/** @type {import('@sveltejs/kit').Config} */
-const config = {
-  preprocess: vitePreprocess(),
-  kit: {
-    adapter: adapter(),
-    alias: {
-      $convex: 'convex',
-    },
-  },
-};
-
-export default config;
-```
-
-#### 3. Playwright & Dev Server Lifecycle Configuration
-
-> [!CRITICAL]
-> **Playwright & Dev Server Lifecycle Configuration (Preventing ENOENT 500 Crashes)**:
-> Default starter templates configure Playwright with `webServer: { command: 'pnpm run build && pnpm run preview', port: 4173 }`.
-> When an agent or developer runs tests while `vite dev` is active in the background, `vite build` wipes `.svelte-kit/output` and unlinks `.svelte-kit/types/` and `.svelte-kit/generated/`. The active `vite dev` server crashes with `500 ENOENT: stat $types.d.ts`.
->
-> **Mandatory Architecture Rule**:
-> 1. Overwrite `playwright.config.ts` to reuse the active dev server, bind to `PORTLESS_URL`, and support local domain:
->    ```ts
->    // playwright.config.ts
->    import { defineConfig, devices } from '@playwright/test';
->    import pkg from './package.json';
->
->    const projectName = pkg.name || 'app';
->    const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL ||
->      process.env.PORTLESS_URL ||
->      (process.env.LOCAL_DOMAIN ? `https://${process.env.LOCAL_DOMAIN}` : `https://${projectName}.localhost`);
->
->    export default defineConfig({
->      testDir: './e2e',
->      webServer: {
->        command: 'pnpm run dev',
->        url: baseURL,
->        reuseExistingServer: true, // Always reuse persistent Portless background daemon locally
->      },
->      use: {
->        baseURL,
->        trace: 'on-first-retry',
->      },
->      projects: [
->        {
->          name: 'chromium',
->          use: { ...devices['Desktop Chrome'] },
->        },
->      ],
->    });
->    ```
->
-> > [!WARNING]
-> > **Playwright `webServer` Process Tree Hang & `portless prune`**:
-> > When `webServer` executes `pnpm run dev`, the process hierarchy is `Playwright` $\to$ `pnpm` $\to$ `portless` $\to$ `vite dev`. Playwright sends `SIGTERM` to `pnpm` when tests complete, but `pnpm` does not reliably forward termination signals down to grandchild processes (`portless` and `vite`). The dev server survives holding the ephemeral port, causing Playwright to hang indefinitely waiting for the `webServer` process tree to exit.
-> >
-> > Setting `reuseExistingServer: true` ensures Playwright attaches to your active, persistent Portless background dev server without spawning and leaking transient processes. If an interrupted test run, crashed session, or terminated subagent leaves dangling dev servers behind, run `portless prune` (or `portless prune --force`) to immediately kill orphaned processes and purge stale routes from `~/.portless/routes.json`.
->
-> 2. Ensure `vite.config.ts` includes `strictPort: true` to prevent port drift, and `allowedHosts: true` to allow Portless proxying:
->    ```ts
->    // vite.config.ts
->    import { sveltekit } from '@sveltejs/kit/vite';
->    import tailwindcss from '@tailwindcss/vite';
->    import { defineConfig } from 'vite';
->
->    export default defineConfig({
->      plugins: [tailwindcss(), sveltekit()],
->      server: {
->        strictPort: true,
->        allowedHosts: true, // Allow Portless proxy on *.localhost (e.g. <project-name>.localhost)
->      },
->      preview: {
->        strictPort: true,
->        allowedHosts: true,
->      },
->    });
->    ```
-> *Result*: Instant test execution (<50ms startup), zero redundant rebuilds, zero filesystem collisions, and multi-agent isolation via Portless ephemeral ports.
-
-#### 4. Mandatory Portless Configuration (`package.json` & Subdomains)
-
-All local development in `overskill` requires Portless to serve the app under a base name of `https://<project-name>.localhost` and subdomains `https://<endpoint>.<project-name>.localhost`, completely eliminating port contention and cookie conflicts.
-
-1. **Configure `package.json` Scripts**:
-   Wrap the `dev` and `preview` scripts with `portless` in `package.json`:
-   ```json
-   {
-     "name": "<project-name>",
-     "scripts": {
-       "dev": "portless run vite dev",
-       "preview": "portless preview.<project-name> vite preview"
-     }
-   }
-   ```
-   *Alternative with `portless` configuration block*:
-   ```json
-   {
-     "name": "<project-name>",
-     "scripts": {
-       "dev": "portless",
-       "dev:app": "vite dev"
-     },
-     "portless": {
-       "name": "<project-name>",
-       "script": "dev:app"
-     }
-   }
-   ```
-
-2. **Native RFC 6761 Loopback & Trusted HTTPS**:
-   Under RFC 6761, all `*.localhost` domains and subdomains automatically resolve to `127.0.0.1` and `::1` across all modern web browsers and OS network resolvers. **No `/etc/hosts` changes or manual proxy configuration are required.** Portless automatically provisions trusted local CA certificates and serves over HTTPS with HTTP/2.
-
-3. **Run Dev Server via Standard `pnpm` Command**:
+1. Check toolchain presence and verify Node 22+ (`convex@1.49+` dropped Node 20):
    ```bash
-   pnpm run dev
+   command -v node && node -v # Node 22+ required (convex@1.49+ dropped Node 20)
+   command -v pnpm && command -v gh && command -v portless && portless doctor
    ```
-   Portless checks if the local proxy daemon is running (or prompts to auto-start it), automatically assigns a free ephemeral port (4000–4999), auto-injects `--port` and `--host` into Vite, and serves the application at `https://<project-name>.localhost`.
-   *(Tip: To keep the proxy running continuously in the background without startup prompts, run `portless proxy start` or configure a `systemd --user` service as documented in [`references/portless.md`](references/portless.md#option-b-systemd-user-service-systemd---user)).*
+2. Verify CLI authentication states (**FORBIDDEN: NEVER use `npx`**):
+   ```bash
+   gh auth status && pnpm dlx vercel whoami && pnpm dlx convex whoami && pnpm dlx clerk whoami
+   ```
+   If any CLI reports unauthenticated, execute the required login recovery command (**NEVER use `npx`**):
+   ```bash
+   gh auth login
+   pnpm dlx vercel login
+   pnpm dlx convex login
+   pnpm dlx clerk auth login
+   ```
+3. Pin project tools with [`templates/.mise.toml`](templates/.mise.toml). If tools are missing, offer automated setup via [`references/mise.md`](references/mise.md).
+4. Conduct the Idea Interview per [`references/non-swe-guide.md`](references/non-swe-guide.md): ask what the user wants to build and customize the schema/UI accordingly.
 
-   > [!TIP]
-   > **Lifecycle Hygiene (`portless prune`)**:
-   > Before starting the dev server after an interrupted session, machine restart, or canceled background subagent, run `portless prune` (or `portless prune --force`):
-   > ```bash
-   > portless prune
-   > ```
-   > This automatically scans `~/.portless/routes.json`, reaps dead CLI routes, and sends `SIGTERM`/`SIGKILL` to any surviving orphaned child dev servers (like `vite dev`) holding previous ephemeral ports.
+### Step 2: Scaffolding Automation (SvelteKit + Tailwind v4 + Testing)
+1. Scaffold minimal TypeScript SvelteKit project and official add-ons:
+   ```bash
+   pnpm dlx sv create . --template minimal --types ts --no-add-ons
+   pnpm dlx sv add tailwindcss vitest="usages:unit,component" playwright --install pnpm
+   pnpm exec playwright install --with-deps chromium
+   ```
+2. Configure path aliases, build settings, test configuration, and styling:
+   - [`templates/svelte.config.js`](templates/svelte.config.js) $\to$ `svelte.config.js` (ensuring `$convex: 'convex'` alias)
+   - [`templates/vite.config.ts`](templates/vite.config.ts) $\to$ `vite.config.ts`
+   - [`templates/playwright.config.ts`](templates/playwright.config.ts) $\to$ `playwright.config.ts`
+   - [`templates/app.d.ts`](templates/app.d.ts) $\to$ `src/app.d.ts`
+   - [`templates/app.css`](templates/app.css) $\to$ `src/app.css`
+   See [`references/sveltekit.md`](references/sveltekit.md) and [`references/tailwind-and-shadcn.md`](references/tailwind-and-shadcn.md).
 
-#### 5. Clean Up Legacy Lint Configurations
-
-Ensure no legacy configuration files or dependencies were introduced. If any `.eslintrc*`, `.prettier*`, or `eslint*` dependencies exist, remove them immediately:
-
-```bash
-# Verify no eslint or prettier dependencies exist
-rm -f .eslintrc* .prettier* prettier.config.* eslint.config.*
-```
-
----
-
-### Step 3: Tooling & Code Quality with Biome
-
-Install Biome as a development dependency and configure unified linting and formatting:
-
-```bash
-# 1. Install Biome
-pnpm add -D @biomejs/biome@^1.9.4
-
-# 2. Initialize Biome configuration
-pnpm dlx @biomejs/biome init
-```
-
-#### Configure `biome.json`
-
-Overwrite `biome.json` with recommended rules tailored for SvelteKit and TypeScript:
-
-```json
-{
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "vcs": {
-    "enabled": false,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "ignore": [
-      ".svelte-kit/**",
-      "build/**",
-      "dist/**",
-      "node_modules/**",
-      ".convex/**",
-      "src/convex/_generated/**",
-      "convex/_generated/**"
-    ]
-  },
-  "formatter": {
-    "enabled": true,
-    "formatWithErrors": false,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
-    "lineWidth": 100
-  },
-  "javascript": {
-    "formatter": {
-      "semicolons": "always",
-      "quoteStyle": "single",
-      "trailingCommas": "all"
-    }
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "correctness": {
-        "noUnusedVariables": "warn"
-      },
-      "style": {
-        "useConst": "error"
-      }
-    }
-  }
-}
-```
-
-#### Add Scripts to `package.json`
-
-Add the following unified scripts to `package.json`:
-
-```json
-"scripts": {
-  "dev": "vite dev",
-  "build": "vite build",
-  "preview": "vite preview",
-  "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && biome check .",
-  "lint": "biome lint .",
-  "format": "biome format --write .",
-  "lint:fix": "biome check --write .",
-  "test": "pnpm run test:unit && pnpm run test:e2e",
-  "test:unit": "vitest run",
-  "test:e2e": "playwright test"
-}
-```
-
-#### Baseline Test Setup
-
-Ensure baseline test files are in place so continuous testing passes immediately:
-
-- **Unit Test**: `src/demo.test.ts`
-  ```ts
-  import { describe, expect, it } from 'vitest';
-
-  describe('sanity test', () => {
-    it('verifies vitest test runner', () => {
-      expect(1 + 1).toBe(2);
-    });
-  });
-  ```
-
-- **E2E Test**: `e2e/demo.test.ts`
-  ```ts
-  import { expect, test } from '@playwright/test';
-
-  test('homepage renders navigation and auth controls', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible();
-    await expect(page.getByRole('button', { name: /^sign in$/i })).toBeVisible();
-  });
-  ```
-
----
+### Step 3: Tooling, Testing & UI Components Setup
+1. Install Biome and shadcn-svelte:
+   ```bash
+   pnpm add -D @biomejs/biome@^1.9.4
+   pnpm dlx shadcn-svelte@latest init -y
+   pnpm dlx shadcn-svelte@latest add button card input label badge separator scroll-area tooltip alert dropdown-menu avatar
+   ```
+2. Copy configuration and test baselines ([`templates/biome.json`](templates/biome.json) $\to$ `biome.json`, [`templates/components.json`](templates/components.json) $\to$ `components.json`, [`templates/unit.test.ts`](templates/unit.test.ts) $\to$ `src/demo.test.ts`, [`templates/demo.spec.ts`](templates/demo.spec.ts) $\to$ `e2e/demo.test.ts`):
+   ```bash
+   cp templates/biome.json biome.json
+   cp templates/components.json components.json
+   cp templates/unit.test.ts src/demo.test.ts
+   cp templates/demo.spec.ts e2e/demo.test.ts
+   ```
+3. Add Node 22+ engine constraint and unified scripts to `package.json`:
+   ```json
+   "engines": {
+     "node": ">=22"
+   },
+   "scripts": {
+     "dev": "portless run vite dev",
+     "build": "vite build",
+     "preview": "portless preview.<project-name> vite preview",
+     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && biome check .",
+     "lint": "biome lint .",
+     "format": "biome format --write .",
+     "lint:fix": "biome check --write .",
+     "test": "pnpm run test:unit && pnpm run test:e2e",
+     "test:unit": "vitest run",
+     "test:e2e": "playwright test"
+   }
+   ```
+   See [`references/biome.md`](references/biome.md) and [`references/testing.md`](references/testing.md).
 
 ### Step 4: Backend & Database Wiring (Convex)
-
-Install Convex and the reactive Svelte client:
-
-```bash
-pnpm add convex convex-svelte svelte-clerk
-```
-
-> [!TIP]
-> **Live Convex Documentation Lookup (Prevent Stale APIs)**:
-> When designing custom schemas, indexing, file storage, full-text search, or scheduled crons beyond the starter template, fetch the relevant Convex guide directly in markdown format by appending `.md` to the URL via `read_url_content` or HTTP GET:
-> - Indexes & compound queries: `https://docs.convex.dev/database/reading-data/indexes.md`
-> - Svelte client guide: `https://docs.convex.dev/client/svelte/overview.md`
-> - Auth & Clerk guide: `https://docs.convex.dev/auth/clerk.md`
-> - Best practices: `https://docs.convex.dev/understanding/best-practices.md`
-> - Complete index: `https://docs.convex.dev/llms.txt`
-> - Official Agent Skills: [`get-convex/agent-skills`](https://github.com/get-convex/agent-skills)
-
-#### 1. Configure Convex Auth: `convex/auth.config.ts`
-
-Create `convex/auth.config.ts` to validate Clerk JWT session tokens against your Clerk Frontend API URL:
-
-```ts
-import type { AuthConfig } from 'convex/server';
-
-export default {
-  providers: [
-    {
-      // Matches the Frontend API URL configured in Clerk Dashboard -> Convex Integration
-      domain: process.env.CLERK_FRONTEND_API_URL || process.env.CLERK_JWT_ISSUER_DOMAIN!,
-      applicationID: 'convex',
-    },
-  ],
-} satisfies AuthConfig;
-```
-
-#### 2. Define Data Schema: `convex/schema.ts`
-
-Create `convex/schema.ts` with user-scoped relational tables and compound indexes:
-
-```ts
-import { defineSchema, defineTable } from 'convex/server';
-import { v } from 'convex/values';
-
-export default defineSchema({
-  tasks: defineTable({
-    text: v.string(),
-    isCompleted: v.boolean(),
-    userId: v.string(),
-  })
-    .index('by_user', ['userId'])
-    .index('by_user_completed', ['userId', 'isCompleted']),
-});
-```
-
-> [!IMPORTANT]
-> **Defense in Depth & Compound Indexing**:
-> 1. **Defense in Depth**: Authorization checks must never exist solely in frontend Svelte routes. Every Convex mutation (`create`, `toggle`, `remove`, `clearCompleted`) and query (`list`) must independently verify `identity && isEmailAuthorized(identity.email)`.
-> 2. **Compound Indexing for State Queries**: Rather than filtering completed tasks in JavaScript after fetching all user records, add compound indexes (`.index('by_user_completed', ['userId', 'isCompleted'])`) to execute index-bounded queries (`q.eq('userId', id).eq('isCompleted', true)`).
-
-#### 3. Implement Authenticated Functions: `convex/tasks.ts`
-
-Create `convex/tasks.ts` verifying user identity via `ctx.auth.getUserIdentity()`:
-
-```ts
-import { v } from 'convex/values';
-import { mutation, query } from './_generated/server';
-
-export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-    return await ctx.db
-      .query('tasks')
-      .withIndex('by_user', (q) => q.eq('userId', identity.subject))
-      .collect();
-  },
-});
-
-export const create = mutation({
-  args: { text: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthenticated: Must be logged in to create tasks');
-    }
-    return await ctx.db.insert('tasks', {
-      text: args.text,
-      isCompleted: false,
-      userId: identity.subject,
-    });
-  },
-});
-
-export const toggle = mutation({
-  args: { id: v.id('tasks') },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthenticated');
-    }
-    const task = await ctx.db.get(args.id);
-    if (!task || task.userId !== identity.subject) {
-      throw new Error('Task not found or unauthorized');
-    }
-    await ctx.db.patch(args.id, { isCompleted: !task.isCompleted });
-  },
-});
-
-export const remove = mutation({
-  args: { id: v.id('tasks') },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthenticated');
-    }
-    const task = await ctx.db.get(args.id);
-    if (!task || task.userId !== identity.subject) {
-      throw new Error('Task not found or unauthorized');
-    }
-    await ctx.db.delete(args.id);
-  },
-});
-
-export const clearCompleted = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthenticated');
-    }
-    // Efficiently query using the compound index instead of in-memory JS filtering
-    const completedTasks = await ctx.db
-      .query('tasks')
-      .withIndex('by_user_completed', (q) =>
-        q.eq('userId', identity.subject).eq('isCompleted', true)
-      )
-      .collect();
-
-    for (const task of completedTasks) {
-      await ctx.db.delete(task._id);
-    }
-  },
-});
-```
-
----
-
-### Step 5: Authentication & Frontend Wiring (Clerk + Convex + Svelte 5)
-
-> [!TIP]
-> **Live Svelte 5, SvelteKit & Clerk Documentation Lookup**:
-> Always ensure UI components use modern Svelte 5 runes rather than deprecated Svelte 4 syntax (`export let`, `$:`, `<slot />`):
-> - Svelte 5 Runes & Reactivity: [`https://svelte.dev/docs/svelte/llms.txt`](https://svelte.dev/docs/svelte/llms.txt) (`$state`, `$derived`, `$effect`, `Snippet`, `{@render children?.()}`).
-> - SvelteKit Loaders & Hooks: [`https://svelte.dev/docs/kit/llms.txt`](https://svelte.dev/docs/kit/llms.txt) (`LayoutServerLoad`, `PageServerLoad`, `hooks.server.ts`).
-> - Clerk Agent Runbook: [`https://clerk.com/SKILL.md`](https://clerk.com/SKILL.md) and [`github.com/clerk/skills`](https://github.com/clerk/skills).
-
-#### 1. Universal Hooks & SSR Transport: `src/hooks.ts`
-
-Initialize the universal Convex client singleton and register the SvelteKit hydration `transport` via `initConvex`:
-
-```ts
-import { PUBLIC_CONVEX_URL } from '$env/static/public';
-import {
-  decodeConvexLoad,
-  decodeConvexLoadPaginated,
-  encodeConvexLoad,
-  encodeConvexLoadPaginated,
-  initConvex,
-} from 'convex-svelte/sveltekit';
-
-initConvex(PUBLIC_CONVEX_URL);
-
-export const transport = {
-  ConvexLoadResult: {
-    encode: encodeConvexLoad,
-    decode: decodeConvexLoad,
-  },
-  ConvexLoadPaginatedResult: {
-    encode: encodeConvexLoadPaginated,
-    decode: decodeConvexLoadPaginated,
-  },
-};
-```
-
-#### 2. Server Handler Pipeline & SSR Token Forwarding: `src/hooks.server.ts`
-
-Sequence Clerk request handling (`withClerkHandler`), Convex auth token extraction with `withServerConvexToken` (using Clerk's `convex` JWT template), and `convexLoadHydration` to inject hydration scripts for preloaded SSR queries:
-
-```ts
-import type { Handle } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
-import { withServerConvexToken } from 'convex-svelte/sveltekit/server';
-import { convexLoadHydration } from 'convex-svelte/sveltekit/server/hydration';
-import { withClerkHandler } from 'svelte-clerk/server';
-
-const convexAuth: Handle = async ({ event, resolve }) => {
-  const auth = event.locals.auth?.();
-  let token: string | undefined;
-
-  if (auth?.userId) {
-    try {
-      token = (await auth.getToken({ template: 'convex' })) ?? undefined;
-    } catch {
-      token = undefined;
-    }
-  }
-
-  return withServerConvexToken(token, () => resolve(event));
-};
-
-export const handle: Handle = sequence(withClerkHandler(), convexAuth, convexLoadHydration);
-```
-
-#### 3. Environment Types: `src/app.d.ts`
-
-Update `src/app.d.ts` to include Clerk environment types:
-
-```ts
-/// <reference types="svelte-clerk/env" />
-
-declare global {
-  namespace App {
-    // interface Error {}
-    // interface Locals {}
-    // interface PageData {}
-    // interface PageState {}
-    // interface Platform {}
-  }
-}
-
-export {};
-```
-
-#### 4. Server Layout Loader for SSR: `src/routes/+layout.server.ts`
-
-Pass initial Clerk authentication state and `isAuthenticated: Boolean(auth.userId)` to the root layout for instant client hydration and SSR prefetching:
-
-```ts
-import { buildClerkProps } from 'svelte-clerk/server';
-import type { LayoutServerLoad } from './$types';
-
-export const load: LayoutServerLoad = ({ locals }) => {
-  const auth = locals.auth();
-  return {
-    ...buildClerkProps(auth),
-    isAuthenticated: Boolean(auth.userId),
-  };
-};
-```
-
-#### 5. Styling & UI Components: Tailwind CSS v4 & shadcn-svelte
-
-Tailwind CSS v4 is configured with the official `@tailwindcss/vite` plugin, and `shadcn-svelte` provides accessible, copy-pasteable component primitives built on Bits UI.
-
-##### Configure `vite.config.ts`
-
-Ensure `vite.config.ts` includes the `@tailwindcss/vite` plugin:
-
-```ts
-import { sveltekit } from '@sveltejs/kit/vite';
-import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  plugins: [tailwindcss(), sveltekit()],
-});
-```
-
-##### Configure `components.json`
-
-Create `components.json` in the project root:
-
-```json
-{
-  "$schema": "https://shadcn-svelte.com/schema.json",
-  "style": "default",
-  "tailwind": {
-    "config": "",
-    "css": "src/app.css",
-    "baseColor": "zinc"
-  },
-  "aliases": {
-    "components": "$lib/components",
-    "utils": "$lib/utils",
-    "ui": "$lib/components/ui",
-    "hooks": "$lib/hooks"
-  },
-  "typescript": true
-}
-```
-
-##### Initialize shadcn-svelte & Core Components
-
-Install core utility packages and add foundational UI primitives:
-
-```bash
-# 1. Install helper dependencies
-pnpm add clsx tailwind-merge bits-ui
-
-# 2. Add accessible UI components on demand
-pnpm dlx shadcn-svelte@latest add button card dialog input badge
-```
-
-##### Configure `src/app.css`
-
-Define Tailwind v4 base styles, shadcn color variables, and the `@theme` token mappings.
-
-> [!IMPORTANT]
-> **Preventing Clerk Modal Transparency with Tailwind CSS v4**:
-> In Tailwind CSS v4, root design variables like `--card`, `--background`, and `--popover` must be defined as valid, executable CSS color values (e.g. `hsl(0 0% 100%)`) rather than bare color channels (`0 0% 100%`).
-> When `@clerk/ui` applies `style="background-color: var(--card)"`, bare channel values cause the browser to mark the property invalid and fall back to transparent, making modal dialogs and backdrops completely invisible. Wrapping tokens in `hsl(...)` ensures solid, beautiful dialog rendering.
-
-```css
-@import "tailwindcss";
-
-@layer base {
-  :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(240 10% 3.9%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(240 10% 3.9%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(240 10% 3.9%);
-    --primary: hsl(240 5.9% 10%);
-    --primary-foreground: hsl(0 0% 98%);
-    --secondary: hsl(240 4.8% 95.9%);
-    --secondary-foreground: hsl(240 5.9% 10%);
-    --muted: hsl(240 4.8% 95.9%);
-    --muted-foreground: hsl(240 3.8% 46.1%);
-    --accent: hsl(240 4.8% 95.9%);
-    --accent-foreground: hsl(240 5.9% 10%);
-    --destructive: hsl(0 84.2% 60.2%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(240 5.9% 90%);
-    --input: hsl(240 5.9% 90%);
-    --ring: hsl(240 5.9% 10%);
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: hsl(240 10% 3.9%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(240 10% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(240 10% 3.9%);
-    --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(240 5.9% 10%);
-    --secondary: hsl(240 3.7% 15.9%);
-    --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(240 3.7% 15.9%);
-    --muted-foreground: hsl(240 5% 64.9%);
-    --accent: hsl(240 3.7% 15.9%);
-    --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 62.8% 30.6%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(240 3.7% 15.9%);
-    --input: hsl(240 3.7% 15.9%);
-    --ring: hsl(240 4.9% 83.9%);
-  }
-
-  * {
-    border-color: var(--border);
-  }
-
-  body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-feature-settings: "rlig" 1, "calt" 1;
-    min-height: 100vh;
-  }
-}
-
-@theme {
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
-}
-```
-
-#### 6. Client Auth Bridge Component: `src/lib/components/ConvexAuth.svelte`
-
-Synchronize Clerk session tokens with Convex on the client via `setupAuth()`, awaiting `clerkReady` for token acquisition, forwarding `initialState` from SSR, and triggering `invalidateAll()` on auth state transitions:
-
-```svelte
-<script lang="ts">
-import { browser } from '$app/environment';
-import { invalidateAll } from '$app/navigation';
-import { type SetupAuthOptions, setupAuth } from 'convex-svelte';
-import { type Snippet, onDestroy, untrack } from 'svelte';
-import { useClerkContext } from 'svelte-clerk/client';
-
-const {
-  children,
-  initialState,
-}: {
-  children?: Snippet;
-  initialState?: SetupAuthOptions['initialState'];
-} = $props();
-
-const clerk = useClerkContext();
-
-let resolveClerkReady: (() => void) | undefined;
-const clerkReady =
-  !browser || clerk.isLoaded
-    ? Promise.resolve()
-    : new Promise<void>((resolve) => {
-        const timer = setTimeout(() => {
-          resolveClerkReady = undefined;
-          resolve();
-        }, 6000);
-        resolveClerkReady = () => {
-          clearTimeout(timer);
-          resolveClerkReady = undefined;
-          resolve();
-        };
-      });
-
-onDestroy(() => {
-  resolveClerkReady?.();
-});
-
-setupAuth(
-  () => ({
-    isLoading: !clerk.isLoaded,
-    isAuthenticated: Boolean(clerk.auth.userId),
-    fetchAccessToken: async ({ forceRefreshToken }) => {
-      await clerkReady;
-      try {
-        if (!clerk.session) return null;
-        return (
-          (await clerk.session.getToken({ template: 'convex', skipCache: forceRefreshToken })) ??
-          null
-        );
-      } catch {
-        return null;
-      }
-    },
-  }),
-  initialState ? { initialState } : undefined,
-);
-
-let previousSignedIn: boolean | undefined = untrack(() => initialState?.isAuthenticated);
-
-$effect(() => {
-  if (!clerk.isLoaded) return;
-  resolveClerkReady?.();
-
-  const isSignedIn = Boolean(clerk.auth.userId);
-  if (previousSignedIn === undefined) {
-    previousSignedIn = isSignedIn;
-  } else if (isSignedIn !== previousSignedIn) {
-    previousSignedIn = isSignedIn;
-    void invalidateAll();
-  }
-});
-</script>
-
-{@render children?.()}
-```
-
-> [!IMPORTANT]
-> **Svelte Context Boundary Constraint (`useClerkContext`)**:
-> `ClerkProvider.svelte` initializes its client context internally via Svelte's `setClerkContext()`. Therefore, `useClerkContext()` **MUST** be invoked in a descendant component rendered inside `<ClerkProvider>` (such as `src/lib/components/ConvexAuth.svelte` or child route components), **never** in the root `+layout.svelte` `<script>` alongside `<ClerkProvider>`. Calling `useClerkContext()` in the root layout `<script>` will fail because the context has not yet been initialized.
-
-#### 7. Root Layout: `src/routes/+layout.svelte`
-
-Initialize Convex client context with `setupConvex(PUBLIC_CONVEX_URL)` and wrap the application tree in `<ClerkProvider>` and `<ConvexAuth>`:
-
-```svelte
-<script lang="ts">
-import '../app.css';
-import { PUBLIC_CONVEX_URL } from '$env/static/public';
-import ConvexAuth from '$lib/components/ConvexAuth.svelte';
-import { setupConvex } from 'convex-svelte';
-import type { Snippet } from 'svelte';
-import { ClerkProvider, SignInButton, SignedIn, SignedOut, UserButton } from 'svelte-clerk';
-import type { LayoutData } from './$types';
-
-const { data, children }: { data: LayoutData; children: Snippet } = $props();
-
-setupConvex(PUBLIC_CONVEX_URL);
-</script>
-
-<ClerkProvider initialState={data.initialState}>
-  <ConvexAuth initialState={{ isAuthenticated: data.isAuthenticated }}>
-    <div class="min-h-screen flex flex-col bg-background text-foreground">
-      <header class="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-90 transition-opacity">
-            <span class="text-xl">⚡</span>
-            <span>SvelteKit + Convex</span>
-          </a>
-          <nav class="flex items-center gap-3">
-            <SignedOut>
-              <SignInButton mode="modal" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 transition-colors cursor-pointer">
-                Sign In
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
-          </nav>
-        </div>
-      </header>
-
-      <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
-        {@render children?.()}
-      </main>
-
-      <footer class="border-t border-border/40 py-6 text-center text-sm text-muted-foreground">
-        <p>Built with SvelteKit, Convex, Clerk & Tailwind CSS</p>
-      </footer>
-    </div>
-  </ConvexAuth>
-</ClerkProvider>
-```
-
-#### 8. Universal SSR Page Loader: `src/routes/+page.ts`
-
-Pre-populate query cache on the server using `convexLoad`, conditionally skipping when the user is unauthenticated:
-
-```ts
-import { api } from '$convex/_generated/api';
-import { convexLoad } from 'convex-svelte/sveltekit';
-import type { PageLoad } from './$types';
-
-export const load: PageLoad = async ({ fetch, parent }) => {
-  const { isAuthenticated } = await parent();
-  return {
-    tasks: await convexLoad(api.tasks.list, isAuthenticated ? {} : 'skip', { fetch }),
-  };
-};
-```
-
-#### 9. Custom Reactive View: `src/routes/+page.svelte`
-
-Tailor this page to the user's specific idea (e.g. recipes, journals, tasks) using Tailwind CSS utility classes and modern card layouts. Consume preloaded data via `$derived(data.tasks)` and access properties directly (`tasks.isLoading`, `tasks.error`, `tasks.data`):
-
-```svelte
-<script lang="ts">
-import { api } from '$convex/_generated/api';
-import { useAuth, useMutation } from 'convex-svelte';
-import { SignInButton, SignedIn, SignedOut } from 'svelte-clerk';
-import type { PageData } from './$types';
-
-const { data }: { data: PageData } = $props();
-
-const auth = useAuth();
-const tasks = $derived(data.tasks);
-const createTask = useMutation(api.tasks.create);
-const toggleTask = useMutation(api.tasks.toggle);
-
-let newTaskText = $state('');
-let isSubmitting = $state(false);
-
-async function handleSubmit(event: SubmitEvent) {
-  event.preventDefault();
-  const text = newTaskText.trim();
-  if (!text || isSubmitting) return;
-
-  isSubmitting = true;
-  try {
-    await createTask({ text });
-    newTaskText = '';
-  } finally {
-    isSubmitting = false;
-  }
-}
-</script>
-
-<SignedOut>
-  <div class="rounded-xl border border-border bg-card p-12 text-center text-card-foreground shadow-sm max-w-xl mx-auto my-12">
-    <h1 class="text-3xl font-extrabold tracking-tight mb-3">Welcome to Your App</h1>
-    <p class="text-muted-foreground text-base mb-8">Sign in to start creating and saving your items with instant real-time sync.</p>
-    <SignInButton mode="modal" class="inline-flex items-center justify-center rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2 transition-colors cursor-pointer shadow-sm">
-      Sign In to Get Started
-    </SignInButton>
-  </div>
-</SignedOut>
-
-<SignedIn>
-  <section class="rounded-xl border border-border bg-card p-6 md:p-8 text-card-foreground shadow-sm">
-    <div class="flex items-center justify-between mb-1">
-      <h2 class="text-2xl font-bold tracking-tight">Your Saved Items</h2>
-      <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-        Live Sync
-      </span>
-    </div>
-    <p class="text-sm text-muted-foreground mb-6">Anything you add updates instantly across your phone and computer.</p>
-
-    {#if auth.isLoading}
-      <div class="rounded-lg border border-border/50 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-        <p>Loading your items...</p>
-      </div>
-    {:else if !auth.isAuthenticated}
-      <div class="rounded-lg border border-border/50 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-        <p>Authenticating...</p>
-      </div>
-    {:else}
-      <form onsubmit={handleSubmit} class="flex gap-2 mb-6">
-        <input
-          type="text"
-          bind:value={newTaskText}
-          placeholder="Add a new item..."
-          disabled={isSubmitting}
-          class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={isSubmitting || !newTaskText.trim()}
-          class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-5 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer shrink-0"
-        >
-          {isSubmitting ? 'Adding...' : 'Add'}
-        </button>
-      </form>
-
-      {#if tasks.isLoading}
-        <div class="rounded-lg border border-border/50 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-          <p>Loading your items...</p>
-        </div>
-      {:else if tasks.error}
-        <div class="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-center text-sm text-destructive">
-          <p>Could not load items: {tasks.error.toString()}</p>
-        </div>
-      {:else if tasks.data?.length === 0}
-        <div class="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          <p>No items yet. Type something above and click Add!</p>
-        </div>
-      {:else}
-        <ul class="divide-y divide-border rounded-lg border border-border overflow-hidden">
-          {#each tasks.data ?? [] as task (task._id)}
-            <li class="p-4 hover:bg-muted/30 transition-colors">
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={task.isCompleted}
-                  onchange={() => toggleTask({ id: task._id })}
-                  class="h-4 w-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
-                />
-                <span class="text-sm font-medium transition-all {task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}">
-                  {task.text}
-                </span>
-              </label>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    {/if}
-  </section>
-</SignedIn>
-```
-
-#### 10. Reactive Query Patterns (Runes vs. Stores & `useQuery` Client Usage)
-
-##### Direct Property Access (NO Svelte Store Syntax)
-In `convex-svelte@0.15.1`, query results returned by `convexLoad` and `useQuery` are **reactive rune objects**, NOT Svelte stores:
-- `tasks.data`: Query payload (or `undefined` while loading).
-- `tasks.isLoading`: `boolean`, `true` while the initial fetch is pending.
-- `tasks.error`: Query execution error, or `undefined`.
-- `tasks.isStale`: `boolean`, `true` when a background refresh is active.
-
-> [!WARNING]
-> **Strictly FORBIDDEN: Svelte Store `$` Prefix**:
-> **Never** write `$tasks.isLoading`, `$tasks.data`, or `$tasks.error`. Queries are reactive objects, not stores. Using `$` will produce compiler errors or runtime crashes. Always access properties directly on the object (e.g. `tasks.isLoading`, `tasks.data`, `tasks.error`).
-
-##### Client-Only Components with `useQuery()`
-When prefetching during SSR is not required (e.g. in client-only dialogs, modals, or secondary views), use `useQuery`:
-
-```svelte
-<script lang="ts">
-  import { useQuery, useAuth } from 'convex-svelte';
-  import { api } from '$convex/_generated/api';
-
-  const auth = useAuth();
-
-  // Pass a reactive getter function () => args to dynamically react to auth changes,
-  // or return 'skip' to conditionally disable the query when unauthenticated:
-  const tasks = useQuery(api.tasks.list, () => (auth.isAuthenticated ? {} : 'skip'));
-</script>
-
-{#if auth.isLoading}
-  <p>Authenticating...</p>
-{:else if tasks.isLoading}
-  <p>Loading items...</p>
-{:else if tasks.error}
-  <p class="text-destructive">Error: {tasks.error.toString()}</p>
-{:else if tasks.data}
-  <ul>
-    {#each tasks.data as task (task._id)}
-      <li>{task.text}</li>
-    {/each}
-  </ul>
-{/if}
-```
-
-> [!IMPORTANT]
-> **Avoid Manual `client.setAuth(...)` in Application Components**:
-> In `convex-svelte@0.15.1`, manual `client.setAuth(...)` wiring in application components is superseded by `setupAuth()`. `setupAuth()` manages `client.setAuth()`, WebSocket pauses, and SSR hydration internally; calling `client.setAuth()` manually bypasses `setupAuth()` coordination. Always delegate client authentication bridging to `setupAuth()` inside `src/lib/components/ConvexAuth.svelte`.
-
----
+1. Install Convex and reactive Svelte client:
+   ```bash
+   pnpm add convex convex-svelte@0.15.1
+   ```
+2. Copy [`templates/convex-schema.ts`](templates/convex-schema.ts) to `convex/schema.ts`, [`templates/convex-tasks.ts`](templates/convex-tasks.ts) to `convex/tasks.ts`, and [`templates/convex-auth.config.ts`](templates/convex-auth.config.ts) to `convex/auth.config.ts`. Tailor schema tables to the user's domain model. See [`references/convex.md`](references/convex.md).
+
+### Step 5: Reactive UI & Auth Wiring (Clerk + Svelte 5)
+1. Install Clerk Svelte SDK:
+   ```bash
+   pnpm add svelte-clerk
+   ```
+2. Wire the universal SSR and auth bridge pipeline:
+   - Universal SSR transport: copy [`templates/hooks.ts`](templates/hooks.ts) to `src/hooks.ts`.
+   - Server hooks: copy [`templates/hooks.server.ts`](templates/hooks.server.ts) to `src/hooks.server.ts` (`withServerConvexToken`).
+   - Server root loader: copy [`templates/layout.server.ts`](templates/layout.server.ts) to `src/routes/+layout.server.ts` (`isAuthenticated`).
+   - Child auth synchronizer: copy [`templates/ConvexAuth.svelte`](templates/ConvexAuth.svelte) to `src/lib/components/ConvexAuth.svelte` (`setupAuth()`).
+   - Root layout: copy [`templates/layout.svelte`](templates/layout.svelte) to `src/routes/+layout.svelte` (`setupConvex()`).
+   - Universal page loader: copy [`templates/page.ts`](templates/page.ts) to `src/routes/+page.ts` (`convexLoad()`).
+   - Reactive page UI: copy [`templates/page.svelte`](templates/page.svelte) to `src/routes/+page.svelte` (direct rune property access `tasks.isLoading`).
+   - Environment template: copy [`templates/env.example`](templates/env.example) to `.env.example`.
+   See [`references/clerk.md`](references/clerk.md), [`references/convex.md`](references/convex.md), and [`references/sveltekit.md`](references/sveltekit.md).
 
 ### Step 6: Backend Provisioning & Click-by-Click Auth Setup
-
-#### 1. Provision Convex Dev Backend Headlessly
-Run headless Convex provisioning:
-```bash
-pnpm convex dev --once
-```
-This generates the deployment URL and updates `.env.local` with `CONVEX_DEPLOYMENT` and `PUBLIC_CONVEX_URL`.
-
-#### 2. Clerk Setup: CLI Automation or Click-by-Click Guide
-
-You can configure Clerk either seamlessly via the terminal using the Clerk CLI (referencing the bundled `clerk` skill or `https://clerk.com/SKILL.md`), or via click-by-click instructions in the Clerk Dashboard.
-
-##### Option A: Fast Terminal Setup with Clerk CLI (`pnpm dlx clerk`)
-If the user prefers terminal-based authentication without leaving the console:
-```bash
-# 1. Authenticate with Clerk (or use accountless dev mode via pnpm dlx clerk init)
-pnpm dlx clerk auth login
-
-# 2. Inspect available applications
-pnpm dlx clerk apps list --json
-
-# 3. Create the mandatory 'convex' JWT Template with audience 'convex'
-pnpm dlx clerk api jwt_templates create \
-  --name convex \
-  --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
-
-# 4. Verify Clerk integration health
-pnpm dlx clerk doctor
-```
-
-> [!IMPORTANT]
-> **Mandatory Audience Claim (`aud: "convex"`)**:
-> Convex backend token verification (`ctx.auth.getUserIdentity()`) validates that the JWT payload contains `applicationID: "convex"` matching `convex/auth.config.ts`. If the JWT template lacks `"aud": "convex"`, Convex will reject queries and mutations with an unauthenticated error even if the user is signed in to Clerk! Always ensure the template defines `"aud": "convex"`.
-
-##### Option B: Click-by-Click Guide in Clerk Dashboard (For Non-SWEs)
-Guide the user with clear, friendly steps to obtain their keys:
-
-> 1. Open [https://dashboard.clerk.com](https://dashboard.clerk.com) in your browser.
-> 2. Click **Add application** (or **Create application**), enter your app's name, and pick how users can sign in (e.g. Google, Email).
-> 3. Click **Create Application**.
-> 4. In the **API Keys** section, copy the **Publishable Key** (starts with `pk_test_...`) and the **Secret Key** (starts with `sk_test_...`).
-> 5. On the left sidebar in Clerk, click **JWT Templates** $\to$ **New Template** $\to$ select the **Convex** template.
-> 6. Ensure the template name is `convex` and the **Audience** (`aud`) field is set to `convex`.
-> 7. Copy the **Issuer** / **Frontend API URL** (it looks like `https://verb-noun-00.clerk.accounts.dev`).
-
-Once the user provides the Frontend API URL, configure it on Convex:
-```bash
-pnpm convex env set CLERK_FRONTEND_API_URL <user-fapi-url>
-```
-
-#### 3. Verify Code Quality & Unit Tests
-```bash
-pnpm run lint
-pnpm run format
-pnpm run test:unit
-```
-
-> [!TIP]
-> **Dev Server Lifecycle & Test Hang Prevention**:
-> When running E2E suites or Playwright tests, ensure the local dev server is already running as a background daemon (`IsDaemon: true`). If Playwright ever hangs after completing tests, or if an earlier dev session/subagent was interrupted, run `portless prune` (or `portless prune --force`):
-> ```bash
-> portless prune
-> ```
-> This terminates any orphaned child dev servers (`vite dev`) left behind holding ephemeral ports and clears stale routes from `~/.portless/routes.json`. Whenever starting or reporting a Portless dev server during local verification, agents must present all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both `https://<project-name>.localhost` and any configured tunnel TLD links (`https://<project-name>.<your-domain.com>`) are surfaced.
-
-#### 4. Test User Provisioning & Interactive Beta-Testing (Playwright CLI)
-
-Before finalizing, interactively beta-test both public and authenticated user flows using the bundled **Playwright CLI script** (see [`playwright` skill](../playwright/SKILL.md)):
-
-##### A. Probe Page Health & Console Output
-Verify zero unhandled runtime exceptions, reactivity warnings, or failed network requests occurred:
-```bash
-node skills/playwright/scripts/playwright-cli.ts probe https://<project-name>.localhost
-```
-
-##### B. Provision a Test User & Authenticate Session
-To test protected pages without manual passwords, captcha, or MFA prompts, run `auth-setup`:
-```bash
-node skills/playwright/scripts/playwright-cli.ts auth-setup --save-session
-```
-*Result*: Provisions `test-agent@example.com`, prints a single-use ticket URL (`__clerk_ticket`), and saves authenticated cookies to `playwright/.clerk/user.json`.
-
-##### C. Capture Authenticated Visual Proof
-Capture high-definition screenshots of protected routes for your walkthrough:
-```bash
-node skills/playwright/scripts/playwright-cli.ts screenshot https://<project-name>.localhost \
-  --auth playwright/.clerk/user.json \
-  -o /home/bryant/.gemini/antigravity/brain/<conversation-id>/dashboard-preview.png
-```
-
-#### 5. Walkthrough Media (Screenshots & Animated GIFs)
-
-Non-SWE creators and users benefit immensely from seeing visual proof of their working application. Use the standalone walkthrough recorder `scripts/record-demo.ts` to automatically capture high-definition screenshots and an animated demo GIF:
-
-```bash
-# 1. Place the walkthrough recorder in scripts/
-mkdir -p scripts
-cp templates/record-demo.ts scripts/record-demo.ts 2>/dev/null || true
-
-# 2. Run the recorder with the dev server running (via Portless https://<project-name>.localhost)
-node scripts/record-demo.ts
-```
-
-> [!TIP]
-> **Walkthrough Artifact Media**:
-> When composing your `walkthrough.md` artifact:
-> 1. Copy the generated `static/demo.gif` and screenshots to your Antigravity conversation artifact directory (`<appDataDir>/brain/<conversation-id>/`).
-> 2. Embed them in `walkthrough.md`:
->    ```markdown
->    ## Interactive Flow Demo
->    ![Live Demo](file:///home/bryant/.gemini/antigravity/brain/<conversation-id>/demo.gif)
->
->    ### Screenshots
->    | Initial Screen | Real-Time Sync |
->    | :---: | :---: |
->    | ![Step 1](file:///path/to/step-1-initial.png) | ![Step 2](file:///path/to/step-2-completed.png) |
->    ```
-
-#### 6. Multi-Device & Remote Access (Cloudflare Tunnels vs. Tailscale)
-
-When testing on physical mobile devices (iOS/Android), verifying webhook delivery (e.g. Clerk webhooks), or sharing an active dev server with collaborators:
-
-##### A. Ask the User for Their Preference
-> *"Would you like to configure remote access for mobile testing or webhook delivery?*
-> *1. **Cloudflare Tunnel with Custom Domain** (Recommended: instant `https://<project-name>.<your-domain.com>` with trusted public SSL and zero client app installation on mobile devices)*
-> *2. **Tailscale Sharing** (`--tailscale` for private tailnet access or `--funnel` for public exposure)*
-> *3. **Localhost Only** (`https://<project-name>.localhost` loopback via RFC 6761)*"
-
-##### B. If Cloudflare Tunnel with Custom Domain is Selected
-1. **Automated Domain Extraction**: If the user has authenticated with Cloudflare (`cloudflared tunnel login`), do **not** force them to look up or type their domain manually. Automatically extract the active domain from `~/.cloudflared/cert.pem` using the bundled script:
+1. Provision Convex development backend headlessly:
    ```bash
-   # In Bash / Zsh:
-   DOMAIN=$(node scripts/cloudflare-domain.ts)
-
-   # In Fish:
-   set DOMAIN (node scripts/cloudflare-domain.ts)
+   pnpm convex dev --once
    ```
-2. Configure Portless with `export PORTLESS_TLD="localhost,$DOMAIN"` (or in Fish: `set -Ux PORTLESS_TLD (node scripts/cloudflare-domain.ts --tld)`).
-   - **Instruct the User to Reconfigure the Persisted Portless Service (Without `sudo`)**:
-     Instruct the user to reconfigure the Portless background service in their interactive terminal so the custom domain is persisted across system boots:
-     ```bash
-     # In Bash / Zsh:
-     portless service install --tld localhost --tld $(node scripts/cloudflare-domain.ts)
-
-     # In Fish:
-     portless service install --tld localhost --tld (node scripts/cloudflare-domain.ts)
-     ```
-     *(Alternatively, if running without systemd as an ad-hoc daemon: `portless proxy stop && portless proxy start --https --tld localhost --tld <domain>`).*
-     > [!IMPORTANT]
-     > Do **NOT** prefix with `sudo` and do **NOT** attempt to run `portless service install` from the agent. Portless handles elevation internally and prompts the user for their administrator password interactively. Agents lack an interactive TTY and will block indefinitely on sudo password prompts.
-3. Ensure the wildcard DNS route is configured (`cloudflared tunnel route dns dev-tunnel "*.$DOMAIN"`).
-4. Configure `~/.cloudflared/config.yml` with a wildcard ingress rule pointing to `https://localhost:443` with `noTLSVerify: true` (as detailed in [`references/portless.md`](references/portless.md#11-remote--multi-device-access-cloudflare-tunnels-vs-tailscale)).
-5. Start or enable the background user service (`systemctl --user enable --now cloudflared` or `cloudflared tunnel run dev-tunnel`).
-6. The application is immediately accessible at `https://<project-name>.<your-domain>` from any smartphone, tablet, or browser on the internet without VPN clients!
-
-##### C. If Tailscale Sharing is Selected
-1. Run the application using Portless's built-in Tailscale flag:
+2. Configure Clerk via CLI (**Option A**) or Dashboard (**Option B** per [`references/clerk.md`](references/clerk.md)):
    ```bash
-   portless <project-name> --tailscale pnpm run dev
+   pnpm dlx clerk auth login
+   pnpm dlx clerk apps list --json
+   pnpm dlx clerk api jwt_templates create --name convex --claims '{"aud": "convex", "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}", "picture": "{{user.image_url}}"}'
+   pnpm dlx clerk doctor
+   pnpm convex env set CLERK_FRONTEND_API_URL <user-fapi-url>
    ```
-2. (Or for public internet access via Tailscale Funnel: `portless <project-name> --funnel pnpm run dev`).
-3. The application is accessible at `https://<node-name>.<tailnet>.ts.net:<assigned-port>` on authorized tailnet devices.
-
----
+3. Verify code quality and run tests:
+   ```bash
+   pnpm run lint && pnpm run format && pnpm run test:unit
+   ```
+4. Prune stale routes and start Portless dev server as a persistent background daemon (`IsDaemon: true`), copy walkthrough scripts, then probe and test interactively:
+   ```bash
+   portless prune
+   pnpm run dev # launch as persistent background daemon (IsDaemon: true)
+   mkdir -p scripts && cp templates/create-test-user.ts scripts/create-test-user.ts && cp templates/record-demo.ts scripts/record-demo.ts
+   node skills/playwright/scripts/playwright-cli.ts probe https://<project-name>.localhost
+   node skills/playwright/scripts/playwright-cli.ts auth-setup --save-session
+   node skills/playwright/scripts/playwright-cli.ts screenshot https://<project-name>.localhost --auth playwright/.clerk/user.json -o preview.png
+   ```
+   Record walkthrough media using [`templates/create-test-user.ts`](templates/create-test-user.ts) and [`templates/record-demo.ts`](templates/record-demo.ts) in `scripts/`. See [`references/playwright-walkthroughs.md`](references/playwright-walkthroughs.md) and [`references/portless.md`](references/portless.md).
 
 ### Step 7: Remote GitHub Repository Creation & Licensing
-
-Every new application scaffolded by this skill must have its remote GitHub repository provisioned and pushed using the GitHub CLI (`gh`).
-
-#### 1. Inquire Repository Visibility & Apply License
-Before creating the repository, ask the user whether the repository should be **public** or **private**:
-
-- **If Public**:
-  The project **MUST** include an MIT license.
-  Generate `LICENSE` with the current year and the author/organization name (retrieved via `gh api user -q .name` or `git config user.name`):
-
-  ```bash
-  YEAR=$(date +%Y)
-  AUTHOR=$(gh api user -q '.name // .login' 2>/dev/null || git config user.name || echo "The Author")
-  cat << EOF > LICENSE
-  MIT License
-
-  Copyright (c) $YEAR $AUTHOR
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files (the "Software"), to deal
-  in the Software without restriction, including without limitation the rights
-  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in all
-  copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-  SOFTWARE.
-  EOF
-  ```
-
-- **If Private**:
-  No public open-source license is required unless requested.
-
-#### 2. Initialize Git and Commit
-```bash
-# 1. Initialize git if not already present
-git init -b main
-
-# 2. Stage and commit all baseline files and license
-git add -A
-git commit -m "feat: initial scaffold with sveltekit, convex, clerk, and biome"
-```
-
-#### 3. Provision Remote Repository on GitHub
-```bash
-# For Public:
-gh repo create <repo-name> --public --source=. --push
-
-# For Private:
-gh repo create <repo-name> --private --source=. --push
-```
-
-Verify that the remote tracking branch is established:
-```bash
-gh repo view
-```
-
----
-
-### Step 8: Headless Vercel Deployment & Environment Variable Sync
-
-> [!IMPORTANT]
-> **Node.js 22.x Runtime Prerequisite (`convex@1.49+`)**:
-> `convex@1.49+` dropped support for Node.js 20 and strictly requires **Node.js 22+**. Before deploying:
-> 1. In **Vercel Project Settings** $\to$ **General** $\to$ **Node.js Version**, ensure the runtime is set to **`22.x`** (or newer).
-> 2. Ensure `package.json` contains `"engines": { "node": ">=22" }` so Vercel build runners automatically select Node.js 22.
-
-1. **Pre-Deployment Verification Gate (Lints & Tests)**:
-   Always verify lints, typechecks, and tests pass before initiating deployment:
+1. Apply MIT license if public using [`templates/LICENSE.mit`](templates/LICENSE.mit):
    ```bash
-   pnpm run check
-   pnpm run test:unit
-   pnpm run test:e2e
+   YEAR=$(date +%Y) AUTHOR=$(gh api user -q '.name // .login' 2>/dev/null || git config user.name || echo "Author")
+   sed -e "s/<YEAR>/$YEAR/g" -e "s/<AUTHOR>/$AUTHOR/g" templates/LICENSE.mit > LICENSE
+   ```
+2. Initialize repository and push to GitHub:
+   ```bash
+   git init -b main && git add -A && git commit -m "feat: initial scaffold with sveltekit, convex, clerk, and biome"
+   gh repo create <repo-name> --public --source=. --push # or --private
+   gh repo view
    ```
 
-2. **Install Vercel CLI & Deploy Headlessly**:
+### Step 8: Headless Vercel Deployment & Environment Sync
+1. Run pre-deployment verification gate:
    ```bash
-   # Ensure Vercel CLI is installed in devDependencies
-   pnpm add -D vercel
-
-   # Initial deployment
-   pnpm vercel --prod --yes
+   pnpm run check && pnpm run test:unit && pnpm run test:e2e
    ```
-
-3. **Synchronize Production Environment Variables on Vercel**:
-   Set the exact required production environment variables using the Vercel CLI:
+2. Deploy Convex production backend:
    ```bash
-   # Add Public Convex URL
+   pnpm convex deploy
+   ```
+3. Deploy headlessly to Vercel and sync environment variables:
+   ```bash
+   pnpm add -D vercel && pnpm vercel --prod --yes
    pnpm vercel env add PUBLIC_CONVEX_URL production
-
-   # Add Public Clerk Publishable Key
    pnpm vercel env add PUBLIC_CLERK_PUBLISHABLE_KEY production
-
-   # Add Clerk Secret Key
    pnpm vercel env add CLERK_SECRET_KEY production
-   ```
-
-4. **Trigger Final Production Build**:
-   ```bash
    pnpm vercel --prod --yes
    ```
-
----
+   *Note*: Ensure Vercel Node.js version is set to **`22.x`** in Project Settings. See [`references/vercel.md`](references/vercel.md).
 
 ### Step 9: Celebration & Shareable Links Handoff
-
-Present the completed application to the user with enthusiasm, clear instructions, and shareable links:
-
-1. **Local Preview Link**:
-   > *"💻 **Local Preview:** You can test your app right now on your computer at: `https://<project-name>.localhost` (served via Portless over trusted HTTPS — zero port collisions or messy numbers!)."*
-   *(Note: Always present all URLs printed by `portless` (`->` and `also ->`, or from `portless list`) so both `https://<project-name>.localhost` and any configured tunnel TLD links, e.g. `https://<project-name>.<your-domain.com>`, are surfaced.)*
-
-2. **Live Mobile & Web Share Link**:
-   > *"🎉 **Your App is Live on the Internet!**"*
-   > *"Here is your shareable link: `https://<your-project>.vercel.app`"*
-   > *"Open it in your phone browser, test creating an account, and text it to family and friends!"*
-
-3. **Remote Development / Mobile Preview Link** *(If Cloudflare Tunnel or Tailscale configured)*:
-   > *"📱 **Remote Dev Preview:** You can test real-time dev changes on your phone at: `https://<project-name>.<your-domain.com>` (or via Tailscale: `https://<node-name>.<tailnet>.ts.net:<port>`)."*
-
-4. **Suggested Next Steps**:
-   Suggest 2–3 fun improvements they can ask you to build next:
-   - *"Would you like to add search and filtering for your items?"*
-   - *"Would you like to add photo or image uploads?"*
-   - *"Would you like to customize the colors and fonts to your favorite style?"*
+Present results to the user with enthusiasm and clear links per [`references/non-swe-guide.md`](references/non-swe-guide.md):
+- **Local Preview**: `https://<project-name>.localhost` (served via Portless over trusted local HTTPS).
+- **Live Production App**: `https://<your-project>.vercel.app` (shareable web/mobile link).
+- **Remote Dev Link** *(optional)*: `https://<project-name>.<your-domain.com>` via Cloudflare Tunnel or Tailscale.
+- Suggest 2–3 creative next steps (e.g., search/filter, image uploads, dark mode styling).
 
 ---
 
 ## Troubleshooting & Common Pitfalls
 
-### 1. `Unsupported engine: package "convex@1.49.x" wanted node ">=22"`
-- **Root Cause**: `convex@1.49.0` and newer dropped support for Node 20 and strictly requires Node.js 22+.
-- **Resolution**:
-  - In `.mise.toml`: Ensure `node = "22"` (or run `mise use node@22`).
-  - In `package.json`: Add `"engines": { "node": ">=22" }`.
-  - On Vercel: Under **Project Settings** $\to$ **General** $\to$ **Node.js Version**, select `22.x`.
-
-### 2. Svelte Context Boundary Constraint: `useClerkContext()` in Root `+layout.svelte`
-- **Root Cause**: `ClerkProvider` sets context inside its component rendering tree. Calling `useClerkContext()` in the `<script>` block of the same `+layout.svelte` where `<ClerkProvider>` is rendered fails because the context has not been initialized yet.
-- **Resolution**: Always call `useClerkContext()` inside a descendant component (e.g. `src/lib/components/ConvexAuth.svelte` or route components) nested as a child of `<ClerkProvider>`.
-
-### 3. Stale Svelte Store Syntax: `$tasks.isLoading` / `$query.data`
-- **Root Cause**: In `convex-svelte@0.15.1`, query results returned by `convexLoad` and `useQuery` are reactive rune objects, NOT Svelte stores.
-- **Resolution**: Access properties directly on the object without `$`: `tasks.isLoading`, `tasks.data`, `tasks.error`. Never write `$tasks.isLoading` or `$tasks.data`.
-
-### 4. Manual `client.setAuth(...)` Coordination Conflicts
-- **Root Cause**: In `convex-svelte@0.15.1`, manual `client.setAuth(...)` wiring in application components is superseded by `setupAuth()`. `setupAuth()` manages `client.setAuth()`, WebSocket pauses, and SSR hydration internally; invoking `client.setAuth()` manually bypasses `setupAuth()` coordination.
-- **Resolution**: Delegate client auth bridging to `src/lib/components/ConvexAuth.svelte` using `setupAuth()`, awaiting `clerkReady`, and forwarding `initialState` from `src/routes/+layout.server.ts`.
-
-### 5. Missing `$convex` Alias in `svelte.config.js`
-- **Root Cause**: Importing `from '$convex/_generated/api'` fails with module resolution error.
-- **Resolution**: Ensure `svelte.config.js` includes `alias: { $convex: 'convex' }` inside `kit: { ... }`.
-
-### 6. Convex Rejects Queries with `Unauthenticated` Even Though Logged into Clerk
-- **Root Cause**: The Clerk JWT template lacks the audience claim `"aud": "convex"` matching `convex/auth.config.ts`.
-- **Resolution**: In Clerk Dashboard $\to$ **JWT Templates** $\to$ **Convex** (or via `pnpm dlx clerk api jwt_templates create --name convex --claims '{"aud": "convex", ...}'`), ensure the audience is explicitly set to `"convex"`.
-
-### 7. Unauthenticated Flashes or Missing SSR Hydration Data
-- **Root Cause**: SSR queries run unauthenticated or hydration scripts are missing.
-- **Resolution**:
-  - In `src/hooks.ts`: Export `transport` and initialize `initConvex(PUBLIC_CONVEX_URL)`.
-  - In `src/hooks.server.ts`: Sequence `sequence(withClerkHandler(), convexAuth, convexLoadHydration)` forwarding token with `withServerConvexToken(token, () => resolve(event))`.
-  - In `src/routes/+layout.server.ts`: Pass `isAuthenticated: Boolean(auth.userId)`.
-  - In `src/routes/+page.ts`: Call `convexLoad(api.tasks.list, isAuthenticated ? {} : 'skip', { fetch })`.
+| Issue / Error | Root Cause | Resolution & Guide |
+| :--- | :--- | :--- |
+| `convex@1.49+ wanted node ">=22"` | Node 20 dropped upstream | Set `node = "22"` in `.mise.toml`, `package.json`, and Vercel ([`references/convex.md`](references/convex.md)) |
+| `useClerkContext()` boundary error | Called in root `+layout.svelte` script | Call inside child component [`templates/ConvexAuth.svelte`](templates/ConvexAuth.svelte) ([`references/clerk.md`](references/clerk.md)) |
+| `$tasks.isLoading` / `$query.data` error | Store syntax used on rune objects | Access properties directly without `$`: `tasks.isLoading`, `tasks.data` ([`references/convex.md`](references/convex.md)) |
+| `client.setAuth()` conflicts | Manual coordination bypasses `setupAuth` | Delegate auth bridging to [`templates/ConvexAuth.svelte`](templates/ConvexAuth.svelte) with `setupAuth()` ([`references/convex.md`](references/convex.md)) |
+| Missing `$convex` alias | Cannot resolve `$convex/_generated/api` | Configure `alias: { $convex: 'convex' }` in [`templates/svelte.config.js`](templates/svelte.config.js) ([`references/sveltekit.md`](references/sveltekit.md)) |
+| Convex query `Unauthenticated` | Clerk JWT missing audience claim | Set `"aud": "convex"` in Clerk JWT template matching `convex/auth.config.ts` ([`references/clerk.md`](references/clerk.md)) |
+| SSR flash / missing hydration | Unauthenticated SSR or missing sequence | Sequence `withClerkHandler`, `convexAuth`, `convexLoadHydration` in `hooks.server.ts` ([`references/sveltekit.md`](references/sveltekit.md)) |
 
 ---
 
@@ -1584,5 +315,3 @@ Present the completed application to the user with enthusiasm, clear instruction
 - [ ] Remote GitHub repository created via `gh repo create` (with MIT license if public).
 - [ ] Project successfully deployed to Vercel with Node 22.x runtime and production environment variables verified.
 - [ ] Live shareable Vercel URL and local preview URL (`https://<project-name>.localhost`) presented clearly to the user.
-
-

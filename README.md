@@ -83,7 +83,7 @@ Fetch and execute the full-stack setup skill from:
 https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md
 ```
 
-Because each skill's `SKILL.md` is strictly self-contained, the agent will ingest the complete set of instructions, configurations, code templates, and execution commands in a single fetch.
+Each skill's `SKILL.md` provides a concise, self-contained orchestration runbook (workflow, CLI commands, guardrails, and verification gates), while verbose code templates (`templates/`) and deep technical guides (`references/`) live in sibling resource directories that agents read on demand (or fetch via sibling raw GitHub URLs when consumed standalone).
 
 ---
 
@@ -108,6 +108,8 @@ mkdir -p .agents/skills/sveltekit-convex-clerk
 curl -sSL https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md \
   -o .agents/skills/sveltekit-convex-clerk/SKILL.md
 ```
+
+*(Note: Installing as an `agy` plugin via Option 1 or inheriting via `.agents/skills.json` makes all companion `templates/` and `references/` available locally. When curling a standalone `SKILL.md`, agents fetch companion resources on demand via sibling raw GitHub URLs).*
 
 ---
 
@@ -266,7 +268,7 @@ overskill/
     │   └── scripts/
     │       └── playwright-cli.ts  # Ergonomic standalone browser automation CLI
     └── <skill-name>/
-        ├── SKILL.md               # Primary self-contained instruction runbook for AGY
+        ├── SKILL.md               # Concise orchestration runbook for AGY
         ├── templates/             # Companion code and configuration templates
         └── references/            # Ingested documentation, endpoints, and specifications
 ```
@@ -275,7 +277,7 @@ overskill/
 
 ## Guidelines for Authoring Skills in `overskill`
 
-1. **Self-Contained `SKILL.md`**: The primary `SKILL.md` file must be complete on its own so that fetching its GitHub raw URL provides everything an agent needs to execute without external file dependencies.
+1. **Concise Orchestration Runbook with Progressive Disclosure**: The primary `SKILL.md` file should be a concise orchestration runbook containing the core workflow, execution commands, non-negotiable guardrails, and verification gates. Delegate verbose boilerplate and file fixtures to `templates/`, and in-depth technical guides or architecture notes to `references/`, ensuring agents read companion resources on demand (with sibling raw-URL discoverability when used standalone).
 2. **Standard YAML Frontmatter**: Must include `name` (lowercase, kebab-case) and `description` (third-person trigger explanation).
 3. **Strict Tooling Rules**: Enforce modern, deterministic package managers (strict `pnpm`, **strictly forbidding `npx` in favor of `pnpm dlx`**) and unified toolchains (e.g. `Biome` instead of legacy ESLint/Prettier combinations, and `mise` for toolchain setup in `~/.local/bin`).
 4. **Verifiable Steps**: Provide automated and manual verification commands at every milestone.

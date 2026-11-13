@@ -422,3 +422,43 @@ When prefetching during SSR is not required (e.g. in client-only dialogs, modals
   </ul>
 {/if}
 ```
+
+---
+
+## 7. Troubleshooting & Common Pitfalls
+
+### 1. `Unsupported engine: package "convex@1.49.x" wanted node ">=22"`
+- **Root Cause**: `convex@1.49.0` and newer dropped support for Node 20 and strictly requires **Node.js 22+** (e.g. 22.x LTS or newer).
+- **Resolution**:
+  - In `.mise.toml`: Ensure `node = "22"` (or run `mise use node@22`).
+  - In `package.json`: Add `"engines": { "node": ">=22" }`.
+  - On Vercel: Under **Project Settings** $\to$ **General** $\to$ **Node.js Version**, select `22.x`.
+
+### 2. Svelte Context Boundary Constraint: `useClerkContext()` in Root `+layout.svelte`
+- **Root Cause**: `<ClerkProvider>` sets context internally during its component execution. Calling `useClerkContext()` in the `<script>` block of the same `+layout.svelte` where `<ClerkProvider>` is rendered fails because the context has not yet been initialized.
+- **Resolution**: Always call `useClerkContext()` inside a descendant component (e.g. `src/lib/components/ConvexAuth.svelte` or route components) nested as a child of `<ClerkProvider>`.
+
+### 3. Stale Svelte Store Syntax: `$tasks.isLoading` / `$query.data`
+- **Root Cause**: In `convex-svelte@0.15.1`, query results returned by `convexLoad` and `useQuery` are reactive rune objects, NOT Svelte stores.
+- **Resolution**: Access properties directly on the object without `$`: `tasks.isLoading`, `tasks.data`, `tasks.error`. Never write `$tasks.isLoading` or `$tasks.data`.
+
+### 4. Manual `client.setAuth(...)` Coordination Conflicts
+- **Root Cause**: In `convex-svelte@0.15.1`, manual `client.setAuth(...)` wiring in application components is superseded by `setupAuth()`. `setupAuth()` coordinates `client.setAuth()`, WebSocket pauses, and SSR hydration internally. Calling `client.setAuth()` manually causes race conditions, hydration mismatches, and WebSocket reconnection loops.
+- **Resolution**: Delegate client auth bridging to `src/lib/components/ConvexAuth.svelte` using `setupAuth()`, awaiting `clerkReady`, and forwarding `initialState` from `src/routes/+layout.server.ts`.
+
+### 5. Missing `$convex` Alias in `svelte.config.js`
+- **Root Cause**: Importing `from '$convex/_generated/api'` fails with module resolution errors (`Cannot find package '$convex'`). SvelteKit only aliases `$lib` by default, whereas `convex/` is located at the project root.
+- **Resolution**: In `svelte.config.js`, add `kit: { alias: { $convex: 'convex' } }`.
+
+### 6. Convex Rejects Queries with `Unauthenticated` Even Though Logged into Clerk
+- **Root Cause**: The Clerk JWT template lacks the audience claim `"aud": "convex"` matching `applicationID: 'convex'` in `convex/auth.config.ts`.
+- **Resolution**: In Clerk Dashboard $\to$ **JWT Templates** $\to$ **Convex** (or via `pnpm dlx clerk api jwt_templates create --name convex --claims '{"aud": "convex", ...}'`), ensure the audience is explicitly set to `"convex"`. Also verify `CLERK_FRONTEND_API_URL` is set on Convex: `pnpm convex env set CLERK_FRONTEND_API_URL <user-fapi-url>`.
+
+### 7. Unauthenticated Flashes or Missing SSR Hydration Data
+- **Root Cause**: SSR queries run unauthenticated or hydration scripts are missing or executed out of sequence.
+- **Resolution**:
+  - In `src/hooks.server.ts`: Sequence `sequence(withClerkHandler(), convexAuth, convexLoadHydration)` forwarding token with `withServerConvexToken(token, () => resolve(event))`.
+  - In `src/hooks.ts`: Export `transport` and initialize `initConvex(PUBLIC_CONVEX_URL)`.
+  - In `src/routes/+layout.server.ts`: Pass `isAuthenticated: Boolean(auth.userId)` alongside `buildClerkProps(auth)`.
+  - In `src/routes/+page.ts`: Call `convexLoad(api.tasks.list, isAuthenticated ? {} : 'skip', { fetch })`.
+
