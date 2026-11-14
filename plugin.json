@@ -16,7 +16,6 @@
     "playwright",
     "jujutsu",
     "jj",
-    "non-swe",
-    "orchestrator"
+    "non-swe"
   ]
 }

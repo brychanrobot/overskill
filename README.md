@@ -10,28 +10,11 @@ Every skill in this repository is built following the official Antigravity Custo
 
 | Skill | Stack / Focus | Description | Raw URL for AGY |
 | :--- | :--- | :--- | :--- |
-| [`orchestrator-pro`](./skills/orchestrator-pro/SKILL.md) | Multi-Agent Orchestration, Architecture, Task Decomposition, Verification, AGY Cloud | Master architect and principal engineering orchestrator. Activates orchestrator-pro persona, decomposes complex engineering problems into parallel workstreams, dynamically registers and coordinates the overskill subagent team, and enforces multi-tiered verification. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/orchestrator-pro/SKILL.md) |
 | [`sveltekit-convex-clerk`](./skills/sveltekit-convex-clerk/SKILL.md) | SvelteKit, Vite, TypeScript, Tailwind CSS v4, shadcn-svelte, Biome, Vitest, Playwright, Convex, Clerk, Vercel | Scaffolds, configures, wires, creates a GitHub repo for, tests, captures screenshot/GIF walkthroughs for, and deploys full-stack reactive SvelteKit applications with real-time backend, auth, and accessible UI. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/sveltekit-convex-clerk/SKILL.md) |
 | [`clerk`](./skills/clerk/SKILL.md) | Clerk, Authentication, Clerk CLI (`pnpm dlx clerk`), Multi-Framework | Adds Clerk authentication with the Clerk CLI using `pnpm dlx clerk`. Supports accountless instant dev keys, linking existing apps, prebuilt UI controls, and multi-tenancy. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/clerk/SKILL.md) |
 | [`jj`](./skills/jj/SKILL.md) | Jujutsu (jj), Version Control, MCP Tools | Strictly mandates Jujutsu MCP tools, bottom-up squash workflow for stack modifications, story-driven commit descriptions, and rebase conflict resolution. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/jj/SKILL.md) |
 | [`local-curl`](./skills/local-curl/SKILL.md) | Localhost, Portless (`.localhost`), Safe HTTP/S Testing, `curl` | Executes safe, authenticated HTTP/HTTPS requests strictly restricted to localhost and Portless (.localhost) domains using `lcurl` with automatic local CA certificate injection. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/local-curl/SKILL.md) |
 | [`playwright`](./skills/playwright/SKILL.md) | Playwright, Browser Automation, Compound Testing, Visual Proof, Smart Locators | Interactively beta-test web applications, click elements, fill forms, execute compound operations (create, form, assert, smoke), run arbitrary Playwright scripts, and debug console errors with `skills/playwright/scripts/playwright-cli.ts`. | [`SKILL.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/skills/playwright/SKILL.md) |
-
----
-
-## Bundled Agents
-
-| Agent | Model | Description | Agent Definition |
-| :--- | :--- | :--- | :--- |
-| [`orchestrator-pro`](./agents/orchestrator-pro.md) | `pro` | Master architect and orchestrator that decomposes complex tasks, coordinates parallel workstreams, and dynamically assigns subagent model tiers based on cost, latency, and complexity heuristics. | [`orchestrator-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/orchestrator-pro.md) |
-| [`product-manager`](./agents/product-manager.md) | `pro` | Product strategy and requirements specialist. Translates ideas and user requests into structured Product Requirements Documents (PRDs), user stories with acceptance criteria, and scoped MVPs. | [`product-manager.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/product-manager.md) |
-| [`ux-researcher`](./agents/ux-researcher.md) | `flash` | User research, usability, and accessibility specialist. Evaluates user journeys, cognitive load, accessibility (WCAG), and usability heuristics. | [`ux-researcher.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/ux-researcher.md) |
-| [`ux-designer`](./agents/ux-designer.md) | `flash` | UI/UX, interaction design, and design system specialist. Crafts component specifications, responsive layouts, 5-state UI models, and Tailwind/shadcn design token guidelines. | [`ux-designer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/ux-designer.md) |
-| [`architect`](./agents/architect.md) | `pro` | System architect and technical planning specialist. Analyzes requirements, surveys codebases, designs system boundaries and data contracts, and drafts concrete Technical Implementation Plans (RFCs) without modifying code. | [`architect.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/architect.md) |
-| [`research`](./agents/research.md) | `flash_lite` | Fast reconnaissance and investigation subagent for exploring codebases, symbol searches, file listings, pattern matching, documentation lookups, and log analysis. | [`research.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/research.md) |
-| [`developer`](./agents/developer.md) | `flash` | Precision implementation and testing subagent that writes clean code, creates and edits files, authors unit/regression tests, and runs validation commands. | [`developer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/developer.md) |
-| [`code-reviewer`](./agents/code-reviewer.md) | `flash` | Fast, objective code review specialist for routine features, unit test coverage, idiomatic style, and bug prevention. | [`code-reviewer.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/code-reviewer.md) |
-| [`code-reviewer-pro`](./agents/code-reviewer-pro.md) | `pro` | Deep architectural, concurrency, and security auditor for high-stakes revisions, breaking changes, and mission-critical code. | [`code-reviewer-pro.md`](https://raw.githubusercontent.com/brychanrobot/overskill/main/agents/code-reviewer-pro.md) |
 
 ---
 
@@ -244,16 +227,6 @@ overskill/
 ├── hooks.json                     # Lifecycle hooks (auto-rewrites npx & pnpx to pnpm dlx)
 ├── package.json                   # Project scripts and dev tools
 ├── skills.json                    # AGY discovery manifest
-├── agents/
-│   ├── orchestrator-pro.md        # Master architect and orchestrator definition
-│   ├── product-manager.md         # Product strategy and requirements specialist definition
-│   ├── ux-researcher.md           # User research, usability & accessibility specialist definition
-│   ├── ux-designer.md             # UI/UX, interaction & design token specialist definition
-│   ├── architect.md               # System architect and technical planning specialist definition
-│   ├── research.md                # Fast reconnaissance subagent definition
-│   ├── developer.md               # Precision implementation subagent definition
-│   ├── code-reviewer.md           # Fast routine code review specialist definition
-│   └── code-reviewer-pro.md       # Deep architectural & security auditor definition
 ├── scripts/
 │   ├── cloudflare-domain.ts       # Automated Cloudflare zone and domain extractor from cert.pem
 │   ├── lcurl                      # Safe localhost-restricted curl wrapper with Portless CA injection
@@ -261,8 +234,6 @@ overskill/
 │   ├── setup-mise.sh              # Idempotent mise, toolchain & daily auto-upgrade timer setup
 │   └── sync-agy-plugins.sh        # Smart poller to auto-update installed plugins
 └── skills/
-    ├── orchestrator-pro/
-    │   └── SKILL.md               # Zero-symlink DRY wrapper activating orchestrator-pro in AGY
     ├── playwright/
     │   ├── SKILL.md               # Playwright browser automation and testing guide
     │   └── scripts/
